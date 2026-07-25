@@ -1,0 +1,269 @@
+// Prisma schema untuk Ronaldo Cloud.
+// Dipakai bersama oleh apps/api dan worker melalui package @minipaas/db.
+//
+// PROVIDER: default "sqlite" agar demo lokal jalan tanpa install DB.
+// Untuk PRODUKSI, ganti provider ke "postgresql" dan set DATABASE_URL ke
+// Postgres Anda. Schema ini sengaja PORTABLE: status disimpan sebagai String
+// (bukan enum Prisma yang khusus Postgres), sehingga sama untuk kedua provider.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite" // ganti ke "postgresql" untuk produksi
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+// USER — identitas dari GitHub OAuth (atau user demo di mode dev).
+// ─────────────────────────────────────────────────────────────
+model User {
+  id          String    @id @default(cuid())
+  email       String?   @unique
+  username    String?   @unique // login bisa pakai username ATAU email
+  name        String?
+  image       String?
+  role        String    @default("USER") // "USER" | "ADMIN"
+  // Auth username/email + password (opsional bila login via GitHub).
+  passwordHash String?
+  githubId    Int?      @unique
+  githubLogin String?
+  // Access token GitHub. Di produksi WAJIB dienkripsi at-rest.
+  githubToken String?
+  projects    Project[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────
+// NODE — VPS yang menjalankan deployment user, terhubung lewat AGENT.
+//
+// Agent di VPS dial-out (WebSocket) ke control plane pakai join token,
+// lalu melapor sysinfo + heartbeat. Karena itu:
+//  - kapasitas (cpu/mem) DILAPORKAN agent, bukan diketik admin
+//  - online/offline DITURUNKAN dari lastSeenAt, bukan tombol manual
+//
+// status = niat admin: "ACTIVE" (boleh terima job) | "DRAINING" (tolak job baru)
+// ─────────────────────────────────────────────────────────────
+model Node {
+  id     String @id @default(cuid())
+  name   String
+  region String @default("default")
+  status String @default("ACTIVE")
+
+  // Join token (disimpan sebagai hash; plaintext hanya ditampilkan sekali).
+  tokenHash String @unique
+
+  // Dilaporkan oleh agent saat register.
+  hostname        String?
+  os              String?
+  arch            String?
+  agentVersion    String?
+  cpuCores        Int     @default(0)
+  memoryMb        Int     @default(0)
+  dockerAvailable Boolean @default(false)
+
+  // Heartbeat & telemetry terakhir.
+  lastSeenAt DateTime?
+  cpuPct     Float?
+  memPct     Float?
+
+  maxServices Int          @default(10)
+  deployments Deployment[]
+  instances   Instance[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────
+// PLATFORM DNS — konfigurasi domain & provider DNS (diatur admin).
+// Baris tunggal (id selalu "default").
+//
+// Kenapa bikin record per-subdomain, bukan wildcard? Cloudflare hanya
+// mengizinkan wildcard PROXIED di plan Enterprise. Dengan record per service,
+// tiap subdomain bisa proxied (TLS + DDoS di edge) walau plan gratis.
+// ─────────────────────────────────────────────────────────────
+model PlatformDns {
+  id       String  @id @default("default")
+  provider String  @default("cloudflare") // "cloudflare" | "manual"
+  enabled  Boolean @default(false)
+
+  // Domain aplikasi user → app tersaji di <slug>.<domain>
+  domain String @default("")
+  zoneId String @default("")
+
+  // Domain platform itu sendiri. Dipakai untuk menyusun perintah instalasi
+  // agent dan tautan yang ditampilkan. Kosong → jatuh ke env.
+  // Boleh sama dengan `domain` (mis. app di sub.contoh.com, dashboard di contoh.com)
+  // atau domain yang sama sekali berbeda.
+  dashboardDomain String @default("")
+  apiDomain       String @default("")
+
+  // API token Cloudflare — DISIMPAN TERENKRIPSI (AES-256-GCM).
+  apiTokenEnc String?
+
+  // Tujuan record: IP (A) atau hostname (CNAME) control plane.
+  target  String  @default("")
+  proxied Boolean @default(true)
+
+  // Hasil pengecekan terakhir.
+  lastCheckAt DateTime?
+  lastOk      Boolean   @default(false)
+  lastError   String?
+
+  updatedAt DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────
+// PROJECT — wadah logis berisi banyak Service.
+// ─────────────────────────────────────────────────────────────
+model Project {
+  id        String    @id @default(cuid())
+  name      String
+  ownerId   String
+  owner     User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  services  Service[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([ownerId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// SERVICE — satu unit yang dapat di-deploy (app atau database).
+// type   : "APP" | "DATABASE"
+// status : "IDLE" | "DEPLOYING" | "RUNNING" | "FAILED" | "STOPPED"
+// ─────────────────────────────────────────────────────────────
+model Service {
+  id     String @id @default(cuid())
+  name   String
+  type   String @default("APP")
+  status String @default("IDLE")
+
+  // Subdomain publik: <slug>.<domain> → di-route oleh reverse proxy.
+  slug String @unique
+  // Id record DNS di provider (untuk dihapus saat service dihapus).
+  dnsRecordId String?
+
+  // Sumber deployment: "GITHUB" (clone+build repo) | "IMAGE" (pull image registry)
+  source String @default("GITHUB")
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Untuk source = GITHUB
+  repoFullName String?
+  repoUrl      String?
+  branch       String? @default("main")
+
+  // Runtime
+  containerPort Int?    @default(3000)
+  // Untuk source = IMAGE / type = DATABASE (mis. nginx:alpine, postgres:16-alpine)
+  image         String?
+
+  // Jumlah salinan yang dijalankan; disebar ke node yang tersedia.
+  replicas Int @default(1)
+
+  // Posisi kartu di canvas arsitektur (drag & drop).
+  posX Float @default(0)
+  posY Float @default(0)
+
+  envVars     EnvironmentVariable[]
+  deployments Deployment[]
+
+  activeDeploymentId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// DEPLOYMENT — satu percobaan build+run pada commit tertentu.
+// status: "QUEUED" | "BUILDING" | "DEPLOYING" | "RUNNING" | "FAILED" | "CANCELLED"
+// ─────────────────────────────────────────────────────────────
+model Deployment {
+  id        String  @id @default(cuid())
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  status    String  @default("QUEUED")
+  commitSha String?
+  branch    String?
+
+  imageTag     String? // untuk runtime docker
+  containerId  String? // handle replica pertama (ringkasan)
+  hostPort     Int? // port replica pertama (ringkasan)
+  errorMessage String?
+
+  // Node replica pertama (ringkasan; detail per replica ada di Instance).
+  nodeId String?
+  node   Node?   @relation(fields: [nodeId], references: [id])
+
+  // Satu baris per replica.
+  instances Instance[]
+
+  logs String? // log ringkas; stream realtime lewat bus (redis/memory)
+
+  startedAt  DateTime?
+  finishedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([serviceId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// INSTANCE — satu replica dari sebuah Deployment, berjalan di satu Node.
+// Replicas > 1 → beberapa Instance, disebar ke node yang tersedia.
+// status: "PENDING" | "RUNNING" | "FAILED" | "STOPPED"
+// ─────────────────────────────────────────────────────────────
+model Instance {
+  id           String     @id @default(cuid())
+  deploymentId String
+  deployment   Deployment @relation(fields: [deploymentId], references: [id], onDelete: Cascade)
+
+  replicaIndex Int    @default(0)
+  status       String @default("PENDING")
+
+  nodeId String?
+  node   Node?   @relation(fields: [nodeId], references: [id])
+
+  handle       String? // pid:<n> atau containerId
+  hostPort     Int?
+  errorMessage String?
+
+  // Telemetry per replica — DILAPORKAN AGENT (hanya agent yang bisa mengukur
+  // proses di mesinnya). Jangan pernah diukur dari control plane.
+  cpuPct    Float?
+  memMb     Float?
+  uptimeSec Int?
+  metricsAt DateTime?
+
+  // Berapa kali agent menghidupkan ulang replica ini (auto-heal).
+  restarts Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([deploymentId])
+  @@index([nodeId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// ENVIRONMENT VARIABLE — key/value yang di-inject ke app.
+// ─────────────────────────────────────────────────────────────
+model EnvironmentVariable {
+  id        String   @id @default(cuid())
+  serviceId String
+  service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  key       String
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([serviceId, key])
+  @@index([serviceId])
+}

@@ -1,0 +1,20 @@
+# dependencies & build
+node_modules/
+.next/
+dist/
+*.tsbuildinfo
+
+# secret & lokal — JANGAN pernah di-commit
+.env
+.env.*
+!.env.example
+*.db
+*.db-journal
+
+# runtime
+.workspaces/
+run_broken_*/
+
+# os
+.DS_Store
+Thumbs.db

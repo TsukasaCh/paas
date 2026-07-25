@@ -1,0 +1,123 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Design tokens ala Railway (dark) ───────────────────────── */
+:root {
+  --background: 240 10% 4%; /* #0a0a0f */
+  --surface: 240 12% 8%; /* kartu */
+  --surface-2: 240 10% 12%; /* input / nested */
+  --foreground: 240 20% 96%;
+  --muted: 240 20% 96%;
+  --muted-foreground: 240 6% 60%;
+  --primary: 265 89% 66%; /* violet #8b5cf6 */
+  --primary-foreground: 0 0% 100%;
+  --border: 240 10% 18%;
+  --ring: 265 89% 66%;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  /* Glow halus ala Railway di atas */
+  background-image: radial-gradient(
+      60rem 40rem at 50% -10rem,
+      hsl(265 89% 66% / 0.12),
+      transparent 60%
+    ),
+    radial-gradient(
+      50rem 30rem at 100% 0,
+      hsl(320 89% 66% / 0.08),
+      transparent 55%
+    );
+  background-attachment: fixed;
+}
+
+/* Scrollbar gelap */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(240 10% 20%);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ── Utilities ──────────────────────────────────────────────── */
+.gradient-text {
+  background: linear-gradient(90deg, #a855f7, #ec4899);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.btn-primary {
+  background: linear-gradient(180deg, #9b6cf7, #7c3aed);
+  color: #fff;
+  box-shadow: 0 1px 0 0 hsl(0 0% 100% / 0.12) inset,
+    0 8px 24px -8px hsl(265 89% 50% / 0.6);
+  transition: filter 0.15s ease, transform 0.05s ease;
+}
+.btn-primary:hover {
+  filter: brightness(1.08);
+}
+.btn-primary:active {
+  transform: translateY(1px);
+}
+.btn-primary:disabled {
+  opacity: 0.5;
+  filter: none;
+}
+
+.btn-ghost {
+  background: hsl(var(--surface-2));
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--foreground));
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.btn-ghost:hover {
+  background: hsl(240 10% 16%);
+  border-color: hsl(240 10% 26%);
+}
+
+.card {
+  background: linear-gradient(
+    180deg,
+    hsl(240 12% 9%),
+    hsl(240 12% 7%)
+  );
+  border: 1px solid hsl(var(--border));
+  border-radius: 16px;
+  box-shadow: 0 1px 0 0 hsl(0 0% 100% / 0.03) inset,
+    0 20px 40px -24px hsl(0 0% 0% / 0.8);
+}
+
+.field {
+  background: hsl(var(--surface-2));
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--foreground));
+  border-radius: 10px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.field::placeholder {
+  color: hsl(var(--muted-foreground) / 0.7);
+}
+.field:focus {
+  border-color: hsl(var(--ring));
+  box-shadow: 0 0 0 3px hsl(var(--ring) / 0.25);
+}

@@ -1,0 +1,28 @@
+{
+  "name": "@minipaas/agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "build:bundle": "esbuild src/index.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist/agent.js --minify --legal-comments=none --external:cpu-features --external:*.node"
+  },
+  "dependencies": {
+    "@minipaas/agent-proto": "workspace:*",
+    "dockerode": "^4.0.2",
+    "pidusage": "^4.0.1",
+    "simple-git": "^3.25.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/dockerode": "^3.3.31",
+    "@types/node": "^22.5.0",
+    "@types/pidusage": "^2.0.5",
+    "@types/ws": "^8.5.12",
+    "esbuild": "^0.28.1",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.2"
+  }
+}

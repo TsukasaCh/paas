@@ -1,0 +1,46 @@
+# Caddyfile CONTOH — sebaiknya JANGAN diedit manual.
+#
+# Cara yang disarankan: atur domain di Admin Console → Domain & DNS, lalu
+# hasilkan berkas ini otomatis supaya tidak pernah bertentangan:
+#
+#   sudo node scripts/gen-caddyfile.mjs -o /etc/caddy/Caddyfile
+#   sudo systemctl reload caddy
+#
+# Berkas ini hanya untuk melihat bentuk akhirnya. Ganti setiap <…> bila
+# memang ingin menulis manual.
+
+{
+	email <email-kamu>          # notifikasi Let's Encrypt
+
+	on_demand_tls {
+		# Gerbang wajib: hanya subdomain terdaftar yang boleh menerbitkan
+		# sertifikat. Tanpa ini siapa pun bisa mengarahkan domainnya ke IP
+		# ini dan menghabiskan rate limit Let's Encrypt.
+		ask http://127.0.0.1:4000/internal/tls-check
+	}
+}
+
+# ── Dashboard ────────────────────────────────────────────────
+<domain-dashboard> {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:3000
+}
+
+# ── API + WebSocket agent ────────────────────────────────────
+<domain-api> {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:4000 {
+		flush_interval -1   # SSE (log realtime) tidak boleh di-buffer
+	}
+}
+
+# ── Aplikasi user: <slug>.<domain-aplikasi> ──────────────────
+*.<domain-aplikasi> {
+	tls {
+		on_demand
+	}
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:8080 {
+		flush_interval -1
+	}
+}

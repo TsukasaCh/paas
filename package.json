@@ -1,0 +1,26 @@
+{
+  "name": "minipaas",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PaaS MVP ala Railway/Heroku",
+  "scripts": {
+    "dev": "pnpm --parallel --filter \"./apps/*\" --filter \"./worker\" dev",
+    "build": "pnpm -r build",
+    "db:push": "pnpm --filter @minipaas/db db:push",
+    "db:studio": "pnpm --filter @minipaas/db studio"
+  },
+  "devDependencies": {
+    "@prisma/client": "^5.19.1",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.2"
+  },
+  "packageManager": "pnpm@9.7.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "pnpm": {
+    "overrides": {
+      "ioredis": "5.11.1"
+    }
+  }
+}

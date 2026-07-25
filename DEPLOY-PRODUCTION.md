@@ -202,16 +202,19 @@ pg_dump "$DATABASE_URL" | gzip > ~/backup-$(date +%F).sql.gz
 ```
 
 ## Batas yang diketahui
-- **WebSocket/SSE milik aplikasi user** belum ditembuskan proxy (HTTP req/res
-  saja). App realtime belum bisa dilayani.
-- **Upload besar** — body request masih di-buffer di memori, belum streaming.
 - **Trafik app melewati control plane** (tunnel WS). Sederhana & tembus NAT,
   tapi EC2 ini jadi jalur data tunggal — perhatikan bandwidth & jadikan
   kandidat pertama untuk di-scale.
-- **Rotasi `SECRET_KEY` belum didukung.**
 - **Sumber Docker Image/Database belum teruji end-to-end** (Docker tidak bisa
   dijalankan di mesin pengembangan). Uji dengan satu service percobaan dulu
   sebelum diandalkan.
+- **Multi-node lintas VPS** baru diuji dengan satu agent.
+
+### Sudah didukung
+- **WebSocket & SSE app user** ditembuskan lewat tunnel agent (dua arah).
+- **Upload besar di-stream** (tidak lagi di-buffer di memori control plane).
+- **Rotasi `SECRET_KEY`** — `scripts/rotate-secret-key.mjs` (lihat README).
+  Backup `SECRET_KEY` tetap wajib.
 - Satu join token = satu agent. Token yang sama dipakai di mesin kedua kini
   **ditolak** dengan pesan jelas (dulu diam-diam saling memutus koneksi) —
   buat node baru untuk tiap mesin.

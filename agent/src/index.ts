@@ -18,7 +18,14 @@ import {
 } from "@minipaas/agent-proto";
 import { collectSysInfo, sampleTelemetry, AGENT_VERSION } from "./sysinfo.js";
 import { runJob, stopService, cleanupService, reviveHung, setEventSink } from "./exec.js";
-import { handleProxyReq } from "./proxy.js";
+import {
+  handleProxyReq,
+  handleProxyReqChunk,
+  handleProxyReqEnd,
+  handleWsOpen,
+  handleWsSend,
+  handleWsClose,
+} from "./proxy.js";
 import { sampleInstances } from "./metrics.js";
 
 const URL = process.env.RC_URL ?? "ws://localhost:4000/agent";
@@ -85,6 +92,27 @@ function connect() {
     // Trafik user yang ditembuskan control plane → aplikasi lokal.
     if (msg.t === "proxy-req") {
       handleProxyReq(msg, send);
+      return;
+    }
+    if (msg.t === "proxy-req-chunk") {
+      handleProxyReqChunk(msg.id, msg.data);
+      return;
+    }
+    if (msg.t === "proxy-req-end") {
+      handleProxyReqEnd(msg.id);
+      return;
+    }
+    // Tunnel WebSocket app user.
+    if (msg.t === "ws-open") {
+      handleWsOpen(msg, send);
+      return;
+    }
+    if (msg.t === "ws-send") {
+      handleWsSend(msg.id, msg.data, msg.binary);
+      return;
+    }
+    if (msg.t === "ws-close") {
+      handleWsClose(msg.id, msg.code, msg.reason);
       return;
     }
 

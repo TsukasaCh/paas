@@ -17,6 +17,7 @@ import {
   type ServerMsg,
   type DeployJobSpec,
   type ProxyReq,
+  type WsOpen,
   type InstanceMetric,
 } from "@minipaas/agent-proto";
 import { prisma } from "@minipaas/db";
@@ -40,7 +41,11 @@ export interface ProxyHandlers {
   onEnd: () => void;
   onErr: (error: string) => void;
 }
-const pending = new Map<string, ProxyHandlers>();
+interface PendingEntry {
+  h: ProxyHandlers;
+  timer: ReturnType<typeof setTimeout>;
+}
+const pending = new Map<string, PendingEntry>();
 
 /** Tembuskan satu request HTTP ke agent. Mengembalikan false bila agent putus. */
 export function sendProxyReq(
@@ -50,13 +55,58 @@ export function sendProxyReq(
 ): boolean {
   const ws = connections.get(nodeId);
   if (ws?.readyState !== WebSocket.OPEN) return false;
-  pending.set(req.id, handlers);
-  // Jaring pengaman bila agent tak pernah menjawab.
-  setTimeout(() => {
+  // Jaring pengaman HANYA sampai response mulai. Dibersihkan saat proxy-res tiba,
+  // supaya response berumur panjang (SSE, download besar) tidak diputus di 35s.
+  const timer = setTimeout(() => {
     if (pending.delete(req.id)) handlers.onErr("Timeout menunggu agent");
   }, 35_000);
+  pending.set(req.id, { h: handlers, timer });
   ws.send(encode(req));
   return true;
+}
+
+/** Kirim potongan body request yang di-stream ke agent. */
+export function sendProxyReqChunk(nodeId: string, id: string, dataB64: string): boolean {
+  return sendTo(nodeId, { t: "proxy-req-chunk", id, data: dataB64 });
+}
+/** Tandai body request streaming selesai. */
+export function sendProxyReqEnd(nodeId: string, id: string): boolean {
+  return sendTo(nodeId, { t: "proxy-req-end", id });
+}
+
+// ── Tunnel WebSocket app user ──────────────────────────────────
+export interface WsHandlers {
+  onOpen: (protocol?: string) => void;
+  onRecv: (buf: Buffer, binary: boolean) => void;
+  onClosed: (code?: number, reason?: string) => void;
+  onErr: (error: string) => void;
+}
+const wsPending = new Map<string, WsHandlers>();
+/** id tunnel WS per node, agar bisa dibersihkan saat agent putus. */
+const nodeWsIds = new Map<string, Set<string>>();
+
+/** Minta agent membuka WS ke app lokal. false bila node putus. */
+export function openWsTunnel(nodeId: string, msg: WsOpen, handlers: WsHandlers): boolean {
+  const ws = connections.get(nodeId);
+  if (ws?.readyState !== WebSocket.OPEN) return false;
+  wsPending.set(msg.id, handlers);
+  let set = nodeWsIds.get(nodeId);
+  if (!set) nodeWsIds.set(nodeId, (set = new Set()));
+  set.add(msg.id);
+  ws.send(encode(msg));
+  return true;
+}
+export function sendWsData(nodeId: string, id: string, dataB64: string, binary: boolean): boolean {
+  return sendTo(nodeId, { t: "ws-send", id, data: dataB64, binary });
+}
+export function sendWsClose(nodeId: string, id: string, code?: number, reason?: string): boolean {
+  const ok = sendTo(nodeId, { t: "ws-close", id, code, reason });
+  dropWsTunnel(nodeId, id);
+  return ok;
+}
+function dropWsTunnel(nodeId: string, id: string): void {
+  wsPending.delete(id);
+  nodeWsIds.get(nodeId)?.delete(id);
 }
 
 export function connectedNodeIds(): string[] {
@@ -398,21 +448,53 @@ export function attachAgentServer(server: Server): void {
 
       // ── Frame tunnel HTTP dari agent ──
       if (msg.t === "proxy-res") {
-        pending.get(msg.id)?.onRes(msg.status, msg.headers);
+        const e = pending.get(msg.id);
+        if (e) {
+          clearTimeout(e.timer); // response mulai → matikan jaring timeout
+          e.h.onRes(msg.status, msg.headers);
+        }
         return;
       }
       if (msg.t === "proxy-chunk") {
-        pending.get(msg.id)?.onChunk(Buffer.from(msg.data, "base64"));
+        pending.get(msg.id)?.h.onChunk(Buffer.from(msg.data, "base64"));
         return;
       }
       if (msg.t === "proxy-end") {
-        pending.get(msg.id)?.onEnd();
-        pending.delete(msg.id);
+        const e = pending.get(msg.id);
+        if (e) {
+          clearTimeout(e.timer);
+          e.h.onEnd();
+          pending.delete(msg.id);
+        }
         return;
       }
       if (msg.t === "proxy-err") {
-        pending.get(msg.id)?.onErr(msg.error);
-        pending.delete(msg.id);
+        const e = pending.get(msg.id);
+        if (e) {
+          clearTimeout(e.timer);
+          e.h.onErr(msg.error);
+          pending.delete(msg.id);
+        }
+        return;
+      }
+
+      // ── Balasan tunnel WebSocket dari agent ──
+      if (msg.t === "ws-open-ok") {
+        wsPending.get(msg.id)?.onOpen(msg.protocol);
+        return;
+      }
+      if (msg.t === "ws-open-err") {
+        wsPending.get(msg.id)?.onErr(msg.error);
+        dropWsTunnel(nodeId, msg.id);
+        return;
+      }
+      if (msg.t === "ws-recv") {
+        wsPending.get(msg.id)?.onRecv(Buffer.from(msg.data, "base64"), msg.binary);
+        return;
+      }
+      if (msg.t === "ws-closed") {
+        wsPending.get(msg.id)?.onClosed(msg.code, msg.reason);
+        dropWsTunnel(nodeId, msg.id);
         return;
       }
 
@@ -485,6 +567,15 @@ export function attachAgentServer(server: Server): void {
     ws.on("close", () => {
       if (nodeId && connections.get(nodeId) === ws) {
         connections.delete(nodeId);
+        // Node putus → semua tunnel WS-nya mati. Beri tahu sisi browser.
+        const ids = nodeWsIds.get(nodeId);
+        if (ids) {
+          for (const id of ids) {
+            wsPending.get(id)?.onClosed(1011, "Node terputus");
+            wsPending.delete(id);
+          }
+          nodeWsIds.delete(nodeId);
+        }
         console.log(`[agent-server] node ${nodeId} terputus`);
       }
     });

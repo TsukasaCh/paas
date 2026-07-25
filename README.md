@@ -93,6 +93,8 @@ Setiap service dapat subdomain: `<slug>.ronaldocloud.id`. Trafik masuk ke
 reverse proxy control plane (`PROXY_PORT`), lalu **ditembuskan lewat koneksi
 WebSocket agent** ke aplikasi di VPS — jadi VPS tetap tanpa port terbuka dan
 boleh di balik NAT. Request disebar **round-robin** ke seluruh replica RUNNING.
+**WebSocket & SSE app user** ikut ditembuskan (upgrade `Upgrade: websocket` dan
+response berumur panjang), dan **upload besar di-stream** tanpa buffering.
 
 Setup produksi (DNS wildcard, TLS, Postgres): lihat **`DEPLOY-PRODUCTION.md`**.
 
@@ -116,8 +118,16 @@ node scripts/encrypt-secrets.mjs          # laporan (dry-run)
 node scripts/encrypt-secrets.mjs --apply  # tulis
 ```
 
-> `SECRET_KEY` wajib di-backup. Kalau hilang/berubah, secret lama tidak bisa
-> dibuka lagi (env var perlu diisi ulang, GitHub perlu dihubungkan ulang).
+> `SECRET_KEY` wajib di-backup. Kalau hilang, secret lama tidak bisa dibuka lagi
+> (env var perlu diisi ulang, GitHub perlu dihubungkan ulang).
+
+**Rotasi kunci** (mengganti `SECRET_KEY` tanpa kehilangan data):
+```bash
+OLD_SECRET_KEY=<kunci-lama> node scripts/rotate-secret-key.mjs         # dry-run
+OLD_SECRET_KEY=<kunci-lama> node scripts/rotate-secret-key.mjs --apply # tulis
+```
+Set `SECRET_KEY` di `.env` ke kunci baru dulu, jalankan dry-run sampai "0 gagal
+dibuka", lalu `--apply` saat API berhenti sebentar.
 
 ## Health check
 Agent mengecek tiap replica dengan **TCP connect ke port aplikasi** (proses hidup
@@ -129,12 +139,20 @@ Agent mengecek tiap replica dengan **TCP connect ke port aplikasi** (proses hidu
   dikirim ke replica mati
 - status service = `RUNNING` selama masih ada ≥1 replica sehat, `FAILED` bila habis
 
-## Belum ada (jujur)
-- **WebSocket/SSE milik app user** belum ditembuskan (baru HTTP req/res biasa).
-- **Body request di-buffer** di proxy (belum streaming) → upload besar belum ideal.
-- **Auto-restart** — replica mati dikeluarkan dari rotasi, tapi belum otomatis
-  dihidupkan ulang; perlu Deploy/Restart manual (atau `replicas` cadangan).
-- **Rotasi `SECRET_KEY` belum didukung** — mengganti kunci membuat secret lama
-  tak terbaca; perlu prosedur re-enkripsi sebelum kunci diputar.
-- Sumber **Image/Database belum teruji** (butuh Docker aktif).
+## Sudah beres
+- ✅ **WebSocket & SSE app user** ditembuskan lewat tunnel agent — dua arah,
+  subprotokol dinegosiasikan (browser handshake diselesaikan setelah app
+  menerima). Cocok untuk chat / live update.
+- ✅ **Upload besar di-stream** — body > 512 KB atau tanpa `content-length`
+  tidak lagi di-buffer di memori control plane (dipompa per-chunk ke agent).
+- ✅ **Auto-restart** replica oleh agent (backoff eksponensial 1→30s +
+  proteksi crash-loop; lihat *Health check*).
+- ✅ **Rotasi `SECRET_KEY`** — `scripts/rotate-secret-key.mjs` mendekripsi dengan
+  kunci lama lalu mengenkripsi ulang dengan kunci baru (env var, `githubToken`,
+  token Cloudflare).
+
+## Batas yang diketahui (jujur)
+- Sumber **Image/Database belum teruji** end-to-end (butuh Docker aktif; runtime
+  **node** sudah terverifikasi).
+- **Multi-node lintas VPS** baru diuji dengan satu agent.
 - `worker/` sudah **digantikan agent** — tersisa hanya sebagai bus log.

@@ -46,6 +46,25 @@ export interface ProxyReq {
   url: string;
   headers: Record<string, string>;
   body?: string; // base64, kosong bila tak ada body
+  /**
+   * true = body TIDAK di-inline; menyusul lewat proxy-req-chunk/proxy-req-end.
+   * Dipakai untuk upload besar agar tidak menumpuk di memori control plane.
+   */
+  streamed?: boolean;
+}
+
+// ── Tunnel WebSocket lewat koneksi agent ───────────────────────
+// App user yang memakai WebSocket (chat, live update) ditembuskan sama seperti
+// HTTP: browser upgrade ke reverse proxy → control plane minta agent membuka WS
+// ke app lokal → frame dipompa dua arah. VPS tetap tanpa port terbuka.
+export interface WsOpen {
+  t: "ws-open";
+  id: string;
+  port: number;
+  url: string;
+  headers: Record<string, string>;
+  /** Daftar subprotokol yang diminta browser (Sec-WebSocket-Protocol), koma-pisah. */
+  protocols?: string;
 }
 
 /**
@@ -90,6 +109,11 @@ export type AgentMsg =
   | { t: "proxy-chunk"; id: string; data: string } // base64
   | { t: "proxy-end"; id: string }
   | { t: "proxy-err"; id: string; error: string }
+  // ── Balasan tunnel WebSocket (agent → control plane) ──
+  | { t: "ws-open-ok"; id: string; protocol?: string } // app menerima; subprotokol terpilih
+  | { t: "ws-open-err"; id: string; error: string } // app menolak/mati sebelum handshake
+  | { t: "ws-recv"; id: string; data: string; binary: boolean } // frame dari app (base64)
+  | { t: "ws-closed"; id: string; code?: number; reason?: string }
   | {
       t: "result";
       deploymentId: string;
@@ -107,7 +131,14 @@ export type ServerMsg =
   | { t: "reject"; reason: string }
   | { t: "deploy"; job: DeployJobSpec }
   | { t: "action"; action: "stop" | "restart" | "cleanup"; serviceId: string }
-  | ProxyReq;
+  | ProxyReq
+  // ── Body request streaming (control plane → agent) ──
+  | { t: "proxy-req-chunk"; id: string; data: string } // base64
+  | { t: "proxy-req-end"; id: string }
+  // ── Tunnel WebSocket (control plane → agent) ──
+  | WsOpen
+  | { t: "ws-send"; id: string; data: string; binary: boolean } // frame dari browser (base64)
+  | { t: "ws-close"; id: string; code?: number; reason?: string };
 
 export function encode(m: AgentMsg | ServerMsg): string {
   return JSON.stringify(m);

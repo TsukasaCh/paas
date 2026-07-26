@@ -82,6 +82,7 @@ Token didapat dari Admin Console (`/admin/login`) → **Hubungkan Node**.
 
 ## Produksi
 - Prisma provider → `postgresql`, `DATABASE_URL` ke Postgres
+  (DB di VPS terpisah, mis. IDCloudhost → **`DEPLOY-DATABASE.md`**)
 - `AGENT_PUBLIC_URL` → **`wss://`** (TLS wajib), `API_PUBLIC_URL` → `https://…`
 - Ganti `ADMIN_USERNAME` / `ADMIN_PASSWORD` bawaan
 - Isi `GITHUB_CLIENT_ID/SECRET` bila ingin login & repo privat GitHub

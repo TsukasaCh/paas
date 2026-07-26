@@ -96,8 +96,13 @@ firewall (22/80/443 saja). Lewati komponen dengan:
 cp deploy/env.production.example .env
 nano .env          # isi semua <…>
 ```
+> **DB di VPS terpisah** (mis. IDCloudhost)? Jalankan bootstrap dengan
+> `INSTALL_POSTGRES=no` dan ikuti **[DEPLOY-DATABASE.md](DEPLOY-DATABASE.md)** —
+> lebih tahan bencana (control plane & data terpisah).
+
 Yang wajib:
-- `DATABASE_URL` → ambil dari `/root/db-url.txt` (dibuat bootstrap)
+- `DATABASE_URL` → ambil dari `/root/db-url.txt` (dibuat bootstrap), atau dari
+  VPS DB terpisah (lihat DEPLOY-DATABASE.md)
 - `SECRET_KEY`, `NEXTAUTH_SECRET`, `INTERNAL_JWT_SECRET` → `openssl rand -hex 32`
 - `ADMIN_USERNAME` / `ADMIN_PASSWORD` → jangan pakai default
 - Domain: `NEXTAUTH_URL`, `API_PUBLIC_URL`, `AGENT_PUBLIC_URL` (**wss://**)

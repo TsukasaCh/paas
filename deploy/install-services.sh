@@ -33,6 +33,18 @@ corepack pnpm --filter @minipaas/web build
 log "Enkripsi secret lama (idempoten)"
 node scripts/encrypt-secrets.mjs --apply || true
 
+# Resolusi path binari. pnpm (isolated) menaruh bin di node_modules/.bin
+# TIAP PAKET, bukan di root — jadi $REPO/node_modules/.bin/tsx TIDAK ada dan
+# systemd gagal exec (203/EXEC). Ambil path per-paket; fallback ke root bila
+# layout hoisted.
+TSX="$REPO/apps/api/node_modules/.bin/tsx"
+[ -x "$TSX" ] || TSX="$REPO/node_modules/.bin/tsx"
+NEXT_BIN="$REPO/apps/web/node_modules/.bin/next"
+[ -x "$NEXT_BIN" ] || NEXT_BIN="$REPO/node_modules/.bin/next"
+[ -x "$TSX" ] || { echo "⛔ tsx tak ditemukan ($TSX). Jalankan pnpm install dulu."; exit 1; }
+[ -x "$NEXT_BIN" ] || { echo "⛔ next tak ditemukan ($NEXT_BIN). Build web dulu."; exit 1; }
+log "Binari: tsx=$TSX  next=$NEXT_BIN"
+
 # ── systemd: API (control plane + proxy + WS agent) ────────────
 cat >/etc/systemd/system/ronaldocloud-api.service <<EOF
 [Unit]
@@ -47,7 +59,7 @@ EnvironmentFile=$REPO/.env
 Environment=NODE_ENV=production
 # Hanya Caddy yang boleh terbuka ke internet.
 Environment=BIND_ADDRESS=127.0.0.1
-ExecStart=$REPO/node_modules/.bin/tsx src/index.ts
+ExecStart=$TSX src/index.ts
 Restart=always
 RestartSec=5
 User=root
@@ -68,7 +80,7 @@ Type=simple
 WorkingDirectory=$REPO/apps/web
 EnvironmentFile=$REPO/.env
 Environment=NODE_ENV=production
-ExecStart=$NODE $REPO/node_modules/.bin/next start -p 3000 -H 127.0.0.1
+ExecStart=$NODE $NEXT_BIN start -p 3000 -H 127.0.0.1
 Restart=always
 RestartSec=5
 User=root

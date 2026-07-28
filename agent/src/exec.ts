@@ -220,7 +220,7 @@ async function runDocker(job: DeployJobSpec, port: number, log: Log) {
     await simpleGit().clone(job.repoUrl!, workDir, ["--depth", "1", "--branch", job.branch ?? "main"]);
     imageTag = `ronaldocloud/${job.serviceId.toLowerCase()}:${job.deploymentId.slice(0, 12)}`;
     log(`Membangun image ${imageTag}…`);
-    await buildImage(workDir, imageTag, log);
+    await buildImage(workDir, imageTag, log, job);
   }
 
   await removeContainerFor(job.instanceId);
@@ -229,7 +229,9 @@ async function runDocker(job: DeployJobSpec, port: number, log: Log) {
     Image: imageTag,
     // Nama unik per replica agar beberapa replica bisa hidup bersama.
     name: `rc_${job.serviceId}_${job.replicaIndex}`.toLowerCase(),
-    Env: Object.entries(job.env).map(([k, v]) => `${k}=${v}`),
+    // PORT=containerPort DIPAKSA terakhir: app (mis. hasil Nixpacks) yang baca
+    // process.env.PORT akan bind ke port yang benar-benar di-expose & di-map.
+    Env: [...Object.entries(job.env).map(([k, v]) => `${k}=${v}`), `PORT=${job.containerPort}`],
     Labels: {
       "ronaldocloud.serviceId": job.serviceId,
       "ronaldocloud.instanceId": job.instanceId,
@@ -413,21 +415,56 @@ function pullImage(image: string, log: Log): Promise<void> {
   });
 }
 
-function buildImage(context: string, tag: string, log: Log): Promise<void> {
-  return new Promise(async (res, rej) => {
+/**
+ * Bangun image dari repo. Ada Dockerfile → `docker build`. Tidak ada →
+ * **Nixpacks** auto-deteksi bahasa (Node/Python/Go/Bun/…) dan membangun image
+ * TANPA perlu Dockerfile — jadi user cukup connect repo, seperti Railway.
+ */
+async function buildImage(
+  context: string,
+  tag: string,
+  log: Log,
+  job: DeployJobSpec,
+): Promise<void> {
+  if (existsSync(join(context, "Dockerfile"))) {
     const stream = await docker.buildImage({ context, src: ["."] }, { t: tag, dockerfile: "Dockerfile" });
-    docker.modem.followProgress(
-      stream,
-      (err, out) => {
-        const failed = out?.find((o: any) => o.error);
-        if (err) return rej(err);
-        if (failed) return rej(new Error(failed.error));
-        res();
-      },
-      (evt: any) => {
-        const s = (evt.stream ?? evt.status ?? "").toString().trim();
-        if (s) log(s);
-      },
+    await new Promise<void>((res, rej) => {
+      docker.modem.followProgress(
+        stream,
+        (err, out) => {
+          const failed = out?.find((o: any) => o.error);
+          if (err) return rej(err);
+          if (failed) return rej(new Error(failed.error));
+          res();
+        },
+        (evt: any) => {
+          const s = (evt.stream ?? evt.status ?? "").toString().trim();
+          if (s) log(s);
+        },
+      );
+    });
+    return;
+  }
+
+  log("Tidak ada Dockerfile → build otomatis dengan Nixpacks…");
+  await new Promise<void>((res, rej) => {
+    const args = ["build", context, "--name", tag];
+    // Env build-time (mis. NEXT_PUBLIC_*) ikut agar ter-bake saat build.
+    for (const [k, v] of Object.entries(job.env)) args.push("--env", `${k}=${v}`);
+    const p = spawn("nixpacks", args, { env: process.env });
+    p.stdout?.on("data", (d: Buffer) => {
+      const s = d.toString().trim();
+      if (s) log(s);
+    });
+    p.stderr?.on("data", (d: Buffer) => {
+      const s = d.toString().trim();
+      if (s) log(s);
+    });
+    p.on("error", (e) =>
+      rej(new Error(`Nixpacks tak bisa dijalankan (pastikan terpasang di node): ${e.message}`)),
+    );
+    p.on("exit", (code) =>
+      code === 0 ? res() : rej(new Error(`Nixpacks build gagal (exit ${code})`)),
     );
   });
 }

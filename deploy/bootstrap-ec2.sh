@@ -81,6 +81,13 @@ https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_C
   systemctl enable --now docker
 fi
 
+# ── Nixpacks (auto-build repo tanpa Dockerfile, ala Railway) ──
+# Dipakai agent saat runtime=docker & repo tak punya Dockerfile.
+if [ "${INSTALL_DOCKER:-yes}" = "yes" ] && ! command -v nixpacks >/dev/null; then
+  log "Memasang Nixpacks"
+  curl -fsSL https://nixpacks.com/install.sh | bash
+fi
+
 # ── Firewall ──────────────────────────────────────────────────
 # Hanya SSH + HTTP/HTTPS. Port aplikasi (3000/4000/8080) TIDAK dibuka —
 # semuanya lewat Caddy. Security Group EC2 juga harus disetel sama.

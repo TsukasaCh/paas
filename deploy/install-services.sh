@@ -12,9 +12,6 @@ log() { echo -e "\n\033[1;35m==>\033[0m $*"; }
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 [ -f "$REPO/.env" ] || { echo "⛔ $REPO/.env belum ada. Salin dari deploy/env.production.example"; exit 1; }
 
-NODE="$(command -v node)"
-PNPM="$(command -v pnpm || echo "$(command -v corepack) pnpm")"
-
 log "Memasang dependency & build ($REPO)"
 cd "$REPO"
 corepack pnpm install --frozen-lockfile 2>/dev/null || corepack pnpm install
@@ -80,7 +77,7 @@ Type=simple
 WorkingDirectory=$REPO/apps/web
 EnvironmentFile=$REPO/.env
 Environment=NODE_ENV=production
-ExecStart=$NODE $NEXT_BIN start -p 3000 -H 127.0.0.1
+ExecStart=$NEXT_BIN start -p 3000 -H 127.0.0.1
 Restart=always
 RestartSec=5
 User=root

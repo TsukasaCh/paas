@@ -160,10 +160,58 @@ export default function Landing() {
               balancing aktif sejak detik pertama deploy.
             </p>
           </div>
-          <div className="space-y-3">
-            <MockCard name="web" url="web-mu.ronaldocloud.id" color="from-violet-500 to-fuchsia-500" />
-            <MockCard name="api" url="api-mu.ronaldocloud.id" color="from-sky-500 to-cyan-500" />
-            <MockCard name="worker" url="privat" color="from-indigo-500 to-blue-500" />
+          <div className="rounded-2xl border border-border bg-background p-2.5 shadow-2xl shadow-black/50">
+            <div className="flex items-center justify-between px-2.5 py-2">
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_2px] shadow-emerald-400/40" />
+                <span className="text-xs font-medium">Production</span>
+              </div>
+              <span className="font-mono text-[11px] text-muted-foreground">
+                3 services · sin1
+              </span>
+            </div>
+            <div className="space-y-2">
+              <ServiceCard
+                tint="violet"
+                name="web"
+                branch="main"
+                sub="web-mu.ronaldocloud.id"
+                meta="42ms"
+                icon={
+                  <Ic>
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M3 12h18" />
+                    <path d="M12 3c2.5 2.5 2.5 15.5 0 18M12 3c-2.5 2.5-2.5 15.5 0 18" />
+                  </Ic>
+                }
+              />
+              <ServiceCard
+                tint="sky"
+                name="api"
+                branch="main"
+                sub="api-mu.ronaldocloud.id"
+                meta="31ms"
+                icon={
+                  <Ic>
+                    <polyline points="16 18 22 12 16 6" />
+                    <polyline points="8 6 2 12 8 18" />
+                  </Ic>
+                }
+              />
+              <ServiceCard
+                tint="zinc"
+                name="worker"
+                branch="main"
+                sub="jaringan privat"
+                meta="2 replika"
+                icon={
+                  <Ic>
+                    <circle cx="12" cy="12" r="3" />
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                  </Ic>
+                }
+              />
+            </div>
           </div>
         </div>
       </section>
@@ -278,20 +326,53 @@ function Ic({ children }: { children: ReactNode }) {
   );
 }
 
-function MockCard({ name, url, color }: { name: string; url: string; color: string }) {
+const TINTS = {
+  violet: "border-violet-500/20 bg-violet-500/10 text-violet-300",
+  sky: "border-sky-500/20 bg-sky-500/10 text-sky-300",
+  zinc: "border-border bg-white/[0.04] text-zinc-300",
+} as const;
+
+function ServiceCard({
+  icon,
+  name,
+  sub,
+  branch,
+  meta,
+  tint,
+}: {
+  icon: ReactNode;
+  name: string;
+  sub: string;
+  branch: string;
+  meta: string;
+  tint: keyof typeof TINTS;
+}) {
   return (
-    <div className="card flex items-center gap-3 p-4">
-      <span className={`grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br ${color} text-sm`}>
-        ●
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="font-medium">{name}</p>
-        <p className="truncate font-mono text-xs text-muted-foreground">{url}</p>
+    <div className="group flex items-center gap-3.5 rounded-xl border border-border bg-card p-3.5 transition-colors hover:border-violet-500/30">
+      <div
+        className={`grid h-10 w-10 shrink-0 place-items-center rounded-lg border ${TINTS[tint]}`}
+      >
+        {icon}
       </div>
-      <span className="inline-flex items-center gap-1.5 text-xs text-emerald-300">
-        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_2px] shadow-emerald-400/50" />
-        Online
-      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="truncate text-sm font-semibold text-foreground">{name}</span>
+          <span className="rounded border border-border bg-surface2 px-1.5 py-0.5 font-mono text-[10px] leading-none text-muted-foreground">
+            {branch}
+          </span>
+        </div>
+        <p className="mt-1 truncate font-mono text-xs text-muted-foreground">{sub}</p>
+      </div>
+      <div className="shrink-0 text-right">
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-300">
+          <span className="relative flex h-1.5 w-1.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400/50" />
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+          </span>
+          Active
+        </span>
+        <p className="mt-1.5 font-mono text-[11px] text-muted-foreground">{meta}</p>
+      </div>
     </div>
   );
 }

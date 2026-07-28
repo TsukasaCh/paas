@@ -1,9 +1,19 @@
 "use client";
-// Registrasi akun: nama + email + password (tanpa perlu GitHub).
+// Registrasi akun: username + nama + email + password (GitHub opsional).
 import { useState } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import {
+  AuthShell,
+  AuthField,
+  AuthDivider,
+  GitHubButton,
+  IconUser,
+  IconLock,
+  IconMail,
+  IconTag,
+} from "@/components/auth-shell";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -39,109 +49,71 @@ export default function RegisterPage() {
     }
   }
 
-  const f = "field w-full px-3 py-2 text-sm";
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center px-6">
-      <Link href="/" className="mb-8 flex items-center gap-2">
-        <span className="grid h-7 w-7 place-items-center rounded-md bg-gradient-to-br from-violet-500 to-fuchsia-500 text-sm shadow-lg shadow-violet-500/30">
-          ▲
-        </span>
-        <span className="font-semibold tracking-tight">
-          Ronaldo<span className="gradient-text">Cloud</span>
-        </span>
-      </Link>
-
-      <form onSubmit={submit} className="card w-full max-w-sm p-8">
-        <h1 className="text-xl font-semibold">Buat akun</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Gratis. Tanpa kartu kredit.
-        </p>
-
-        <div className="mt-6 space-y-3">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">
-              Username
-            </label>
-            <input
-              autoFocus
-              value={form.username}
-              onChange={(e) => setForm({ ...form, username: e.target.value })}
-              className={f}
-              placeholder="username kamu"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">
+    <AuthShell
+      title="Buat akun"
+      subtitle="Gratis. Tanpa kartu kredit."
+      footer={
+        <>
+          Sudah punya akun?{" "}
+          <Link href="/login" className="auth-link">
+            Masuk
+          </Link>
+        </>
+      }
+    >
+      <form onSubmit={submit}>
+        <AuthField
+          label="Username"
+          icon={IconUser}
+          autoFocus
+          value={form.username}
+          onChange={(e) => setForm({ ...form, username: e.target.value })}
+          placeholder="username kamu"
+        />
+        <AuthField
+          label={
+            <>
               Nama <span className="opacity-60">(opsional)</span>
-            </label>
-            <input
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className={f}
-              placeholder="Nama tampilan"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">
-              Email
-            </label>
-            <input
-              type="email"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              className={f}
-              placeholder="kamu@email.com"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">
-              Password
-            </label>
-            <input
-              type="password"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              className={f}
-              placeholder="Minimal 8 karakter"
-            />
-          </div>
-        </div>
-
+            </>
+          }
+          icon={IconTag}
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          placeholder="Nama tampilan"
+        />
+        <AuthField
+          label="Email"
+          icon={IconMail}
+          type="email"
+          value={form.email}
+          onChange={(e) => setForm({ ...form, email: e.target.value })}
+          placeholder="kamu@email.com"
+        />
+        <AuthField
+          label="Password"
+          icon={IconLock}
+          type="password"
+          value={form.password}
+          onChange={(e) => setForm({ ...form, password: e.target.value })}
+          placeholder="Minimal 8 karakter"
+        />
         {error && (
-          <p className="mt-3 rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+          <p className="mb-4 rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm text-red-300">
             {error}
           </p>
         )}
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="btn-primary mt-5 w-full rounded-lg px-4 py-2.5 text-sm font-semibold"
-        >
+        <button type="submit" disabled={loading} className="auth-cta">
           {loading ? "Membuat akun…" : "Daftar"}
-        </button>
-
-        <div className="my-5 flex items-center gap-3">
-          <span className="h-px flex-1 bg-border" />
-          <span className="text-xs text-muted-foreground">atau</span>
-          <span className="h-px flex-1 bg-border" />
-        </div>
-
-        <button
-          type="button"
-          onClick={() => signIn("github", { callbackUrl: "/dashboard" })}
-          className="btn-ghost w-full rounded-lg px-4 py-2.5 text-sm font-medium"
-        >
-          Daftar dengan GitHub
         </button>
       </form>
 
-      <p className="mt-6 text-sm text-muted-foreground">
-        Sudah punya akun?{" "}
-        <Link href="/login" className="text-violet-400 hover:underline">
-          Masuk
-        </Link>
-      </p>
-    </div>
+      <AuthDivider />
+
+      <GitHubButton
+        label="Daftar dengan GitHub"
+        onClick={() => signIn("github", { callbackUrl: "/dashboard" })}
+      />
+    </AuthShell>
   );
 }

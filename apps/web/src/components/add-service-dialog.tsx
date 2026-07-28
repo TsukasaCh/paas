@@ -228,11 +228,6 @@ export function AddServiceDialog({
                       <p className="mt-1.5 line-clamp-2 text-[11px] leading-snug text-muted-foreground">
                         {t.desc}
                       </p>
-                      {t.needsDocker && (
-                        <span className="mt-2 inline-block rounded border border-amber-500/25 bg-amber-500/10 px-1.5 py-px text-[10px] text-amber-300">
-                          perlu Docker
-                        </span>
-                      )}
                     </button>
                   ))}
                 </div>

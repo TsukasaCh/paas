@@ -1,6 +1,5 @@
 // Katalog template siap-deploy (mirip Railway) — dikurasi di sini.
-// GitHub/Node: jalan di runtime "node" (app WAJIB baca process.env.PORT).
-// Image (needsDocker): butuh node yang punya Docker aktif.
+// Semua node punya Docker aktif → app user terisolasi dalam container.
 export interface Template {
   id: string;
   name: string;
@@ -12,8 +11,6 @@ export interface Template {
   image?: string;
   containerPort: number;
   env?: { key: string; value: string }[];
-  /** true = perlu node ber-Docker (sumber image); false = jalan di runtime node. */
-  needsDocker?: boolean;
 }
 
 export const TEMPLATES: Template[] = [
@@ -35,9 +32,7 @@ export const TEMPLATES: Template[] = [
     source: "IMAGE",
     image: "postgres:16-alpine",
     containerPort: 5432,
-    env: [{ key: "POSTGRES_PASSWORD", value: "secret" }],
-    needsDocker: true,
-  },
+    env: [{ key: "POSTGRES_PASSWORD", value: "secret" }],  },
   {
     id: "redis",
     name: "Redis",
@@ -45,9 +40,7 @@ export const TEMPLATES: Template[] = [
     category: "Database",
     source: "IMAGE",
     image: "redis:7-alpine",
-    containerPort: 6379,
-    needsDocker: true,
-  },
+    containerPort: 6379,  },
   {
     id: "mysql",
     name: "MySQL",
@@ -56,9 +49,7 @@ export const TEMPLATES: Template[] = [
     source: "IMAGE",
     image: "mysql:8",
     containerPort: 3306,
-    env: [{ key: "MYSQL_ROOT_PASSWORD", value: "secret" }],
-    needsDocker: true,
-  },
+    env: [{ key: "MYSQL_ROOT_PASSWORD", value: "secret" }],  },
   {
     id: "n8n",
     name: "n8n",
@@ -66,9 +57,7 @@ export const TEMPLATES: Template[] = [
     category: "Tool",
     source: "IMAGE",
     image: "n8nio/n8n",
-    containerPort: 5678,
-    needsDocker: true,
-  },
+    containerPort: 5678,  },
   {
     id: "wordpress",
     name: "WordPress",
@@ -76,7 +65,5 @@ export const TEMPLATES: Template[] = [
     category: "Tool",
     source: "IMAGE",
     image: "wordpress:latest",
-    containerPort: 80,
-    needsDocker: true,
-  },
+    containerPort: 80,  },
 ];

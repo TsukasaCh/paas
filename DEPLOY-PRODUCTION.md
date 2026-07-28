@@ -148,7 +148,10 @@ Sejak ini setiap service baru otomatis mendapat record subdomainnya sendiri, dan
 perintah instalasi agent otomatis memakai domain yang kamu isi di sini.
 
 ## 8. Daftarkan node (agent)
-Agent bisa di EC2 yang sama maupun VPS lain.
+Node = mesin yang **menampung app user** (build + run terisolasi Docker). Idealnya
+VPS terpisah dari control plane. `install.sh` **otomatis memasang Docker +
+Nixpacks + agent** (di sistem apt/Ubuntu), jadi node baru cukup **satu perintah**
+— jalankan **sebagai root**. (Control plane sendiri tak butuh Docker.)
 
 1. Admin Console → **Hubungkan Node** → beri nama → salin perintahnya.
 2. Jalankan di server target:

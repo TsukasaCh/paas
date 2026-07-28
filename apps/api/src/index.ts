@@ -97,9 +97,38 @@ done
 [ -z "$TOKEN" ] && { echo "ERROR: --token wajib diisi"; exit 1; }
 [ -z "$URL" ] && URL="ws://localhost:4000/agent"
 
-echo "==> Memasang Ronaldo Cloud agent"
-command -v node >/dev/null 2>&1 || { echo "ERROR: Node.js belum terpasang di server ini"; exit 1; }
-command -v git  >/dev/null 2>&1 || echo "PERINGATAN: git belum terpasang — deploy dari repo akan gagal"
+echo "==> Menyiapkan node (agent + Docker + Nixpacks)"
+if [ "$(id -u)" -ne 0 ]; then
+  echo "ERROR: jalankan sebagai root — contoh: curl … | sudo sh -s -- --url=… --token=…"
+  exit 1
+fi
+
+if command -v apt-get >/dev/null 2>&1; then
+  export DEBIAN_FRONTEND=noninteractive
+  command -v curl >/dev/null 2>&1 || { apt-get update -qq; apt-get install -y -qq curl ca-certificates; }
+  command -v git  >/dev/null 2>&1 || { apt-get update -qq; apt-get install -y -qq git; }
+  if ! command -v node >/dev/null 2>&1; then
+    echo "==> Memasang Node.js 20"
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+    apt-get install -y -qq nodejs
+  fi
+else
+  command -v node >/dev/null 2>&1 || { echo "ERROR: Node.js belum ada & tak bisa auto-install (bukan sistem apt)"; exit 1; }
+  command -v git  >/dev/null 2>&1 || echo "PERINGATAN: git belum ada — deploy dari repo akan gagal"
+fi
+
+# Docker — jalankan app user TERISOLASI dalam container
+if ! command -v docker >/dev/null 2>&1; then
+  echo "==> Memasang Docker"
+  curl -fsSL https://get.docker.com | sh
+fi
+systemctl enable --now docker >/dev/null 2>&1 || true
+
+# Nixpacks — build repo tanpa Dockerfile (auto-deteksi bahasa, ala Railway)
+if ! command -v nixpacks >/dev/null 2>&1; then
+  echo "==> Memasang Nixpacks"
+  curl -fsSL https://nixpacks.com/install.sh | bash
+fi
 
 INSTALL_DIR=/opt/ronaldocloud-agent
 mkdir -p "$INSTALL_DIR"

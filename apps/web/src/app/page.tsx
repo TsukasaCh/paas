@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 
 // Landing page (marketing). Benefit-focused, tanpa jargon internal.
@@ -96,13 +97,42 @@ export default function Landing() {
       <section id="cara" className="mx-auto max-w-6xl px-6 py-16">
         <div className="grid gap-10 sm:grid-cols-3">
           {[
-            { icon: "🔗", title: "Hubungkan repo", desc: "Pilih repositori GitHub & branch yang ingin dijalankan." },
-            { icon: "⚙️", title: "Kami build otomatis", desc: "Deteksi cara build & jalankan aplikasimu tanpa setup." },
-            { icon: "🌍", title: "Langsung online", desc: "Dapat URL publik, SSL, dan log realtime seketika." },
+            {
+              icon: (
+                <Ic>
+                  <path d="M9 17H7A5 5 0 0 1 7 7h2" />
+                  <path d="M15 7h2a5 5 0 0 1 0 10h-2" />
+                  <line x1="8" y1="12" x2="16" y2="12" />
+                </Ic>
+              ),
+              title: "Hubungkan repo",
+              desc: "Pilih repositori GitHub & branch yang ingin dijalankan.",
+            },
+            {
+              icon: (
+                <Ic>
+                  <polyline points="4 17 10 11 4 5" />
+                  <line x1="12" y1="19" x2="20" y2="19" />
+                </Ic>
+              ),
+              title: "Build otomatis",
+              desc: "Deteksi cara build & jalankan aplikasimu tanpa setup.",
+            },
+            {
+              icon: (
+                <Ic>
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M3 12h18" />
+                  <path d="M12 3c2.5 2.5 2.5 15.5 0 18M12 3c-2.5 2.5-2.5 15.5 0 18" />
+                </Ic>
+              ),
+              title: "Langsung online",
+              desc: "Dapat URL publik, SSL, dan log realtime seketika.",
+            },
           ].map((s, i) => (
             <div key={s.title}>
               <div className="mb-3 flex items-center gap-3">
-                <span className="grid h-10 w-10 place-items-center rounded-lg bg-surface2 text-lg">
+                <span className="grid h-10 w-10 place-items-center rounded-lg border border-border bg-surface2 text-violet-300">
                   {s.icon}
                 </span>
                 <span className="font-mono text-sm text-muted-foreground">
@@ -131,9 +161,9 @@ export default function Landing() {
             </p>
           </div>
           <div className="space-y-3">
-            <MockCard name="web-app" url="web-app.ronaldocloud.id" color="from-violet-500 to-fuchsia-500" />
-            <MockCard name="api" url="api.ronaldocloud.id" color="from-sky-500 to-cyan-500" />
-            <MockCard name="postgres" url="internal · TCP 5432" color="from-indigo-500 to-blue-500" />
+            <MockCard name="web" url="web-mu.ronaldocloud.id" color="from-violet-500 to-fuchsia-500" />
+            <MockCard name="api" url="api-mu.ronaldocloud.id" color="from-sky-500 to-cyan-500" />
+            <MockCard name="worker" url="privat" color="from-indigo-500 to-blue-500" />
           </div>
         </div>
       </section>
@@ -142,13 +172,51 @@ export default function Landing() {
       <section id="fitur" className="mx-auto max-w-6xl px-6 pb-24">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { icon: "🐙", title: "Deploy dari GitHub", desc: "Push ke branch, otomatis build & rilis." },
-            { icon: "🗄️", title: "Database sekali klik", desc: "Postgres & Redis siap pakai sebagai service." },
-            { icon: "📡", title: "Log realtime", desc: "Streaming build & runtime langsung ke dashboard." },
-            { icon: "🚀", title: "Scaling otomatis", desc: "Kapasitas menyesuaikan — kamu fokus ke kode." },
+            {
+              icon: (
+                <Ic>
+                  <line x1="6" y1="3" x2="6" y2="15" />
+                  <circle cx="18" cy="6" r="3" />
+                  <circle cx="6" cy="18" r="3" />
+                  <path d="M18 9a9 9 0 0 1-9 9" />
+                </Ic>
+              ),
+              title: "Deploy dari GitHub",
+              desc: "Push ke branch, otomatis build & rilis.",
+            },
+            {
+              icon: (
+                <Ic>
+                  <ellipse cx="12" cy="5" rx="8" ry="3" />
+                  <path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5" />
+                  <path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" />
+                </Ic>
+              ),
+              title: "Database terkelola",
+              desc: "Siapkan database untuk aplikasimu, langsung terhubung.",
+            },
+            {
+              icon: (
+                <Ic>
+                  <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                </Ic>
+              ),
+              title: "Log realtime",
+              desc: "Streaming build & runtime langsung ke dashboard.",
+            },
+            {
+              icon: (
+                <Ic>
+                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                  <polyline points="17 6 23 6 23 12" />
+                </Ic>
+              ),
+              title: "Scaling otomatis",
+              desc: "Kapasitas menyesuaikan — kamu fokus ke kode.",
+            },
           ].map((f) => (
             <div key={f.title} className="card p-5">
-              <div className="mb-3 grid h-10 w-10 place-items-center rounded-lg bg-surface2 text-lg">
+              <div className="mb-3 grid h-10 w-10 place-items-center rounded-lg border border-border bg-surface2 text-violet-300">
                 {f.icon}
               </div>
               <h3 className="font-semibold">{f.title}</h3>
@@ -189,6 +257,24 @@ export default function Landing() {
         </div>
       </footer>
     </div>
+  );
+}
+
+// Ikon garis minimalis (menggantikan emoji) — mewarisi warna dari induk.
+function Ic({ children }: { children: ReactNode }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.7}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-5 w-5"
+      aria-hidden="true"
+    >
+      {children}
+    </svg>
   );
 }
 

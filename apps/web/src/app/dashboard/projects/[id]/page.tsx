@@ -9,7 +9,7 @@ import { updateService, deleteProject } from "@/lib/api";
 import { ServiceStatusBadge } from "@/components/service-status-badge";
 import { AddServiceDialog } from "@/components/add-service-dialog";
 import { IconRocket, IconDatabase } from "@/components/icons";
-import { ServiceDetailView } from "@/app/dashboard/services/[id]/page";
+import { ServiceDetailView } from "@/components/service-detail";
 
 const CARD_W = 220;
 const CARD_H = 96;

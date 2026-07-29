@@ -119,8 +119,8 @@ function connect() {
     if (msg.t === "deploy") {
       const { job } = msg;
       const tag = job.replicaIndex > 0 ? `[replica ${job.replicaIndex}] ` : "";
-      const log = (line: string) =>
-        send({ t: "log", deploymentId: job.deploymentId, line: tag + line });
+      const log = (line: string, stream?: "build" | "runtime") =>
+        send({ t: "log", deploymentId: job.deploymentId, line: tag + line, stream });
       console.log(
         `[agent] job deploy ${job.deploymentId} replica#${job.replicaIndex} (${job.source}/${job.runtime})`,
       );

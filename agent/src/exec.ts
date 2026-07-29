@@ -18,7 +18,7 @@ const WORKSPACE = process.env.AGENT_WORKSPACE ?? resolve(os.tmpdir(), "ronaldocl
 const PORT_START = Number(process.env.PORT_RANGE_START ?? 20000);
 const PORT_END = Number(process.env.PORT_RANGE_END ?? 30000);
 
-type Log = (line: string) => void;
+type Log = (line: string, stream?: "build" | "runtime") => void;
 
 // Proses/container yang sedang jalan, per instanceId (satu replica = satu entri).
 interface Running {
@@ -168,8 +168,8 @@ async function runNode(job: DeployJobSpec, port: number, log: Log) {
     env: { ...process.env, ...job.env, PORT: String(port) },
     shell: process.platform === "win32" && plan.cmd.endsWith(".cmd"),
   });
-  proc.stdout?.on("data", (d: Buffer) => log(d.toString().trim()));
-  proc.stderr?.on("data", (d: Buffer) => log(d.toString().trim()));
+  proc.stdout?.on("data", (d: Buffer) => log(d.toString().trim(), "runtime"));
+  proc.stderr?.on("data", (d: Buffer) => log(d.toString().trim(), "runtime"));
 
   await new Promise<void>((res, rej) => {
     const t = setTimeout(res, 1500);
@@ -473,6 +473,6 @@ async function streamContainerLogs(container: Docker.Container, log: Log) {
   const stream = await container.logs({ follow: true, stdout: true, stderr: true, tail: 0 });
   (stream as NodeJS.ReadableStream).on("data", (c: Buffer) => {
     const t = c.toString("utf8").replace(/[\x00-\x08]/g, "").trim();
-    if (t) log(t);
+    if (t) log(t, "runtime");
   });
 }

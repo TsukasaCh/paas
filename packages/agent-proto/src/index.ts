@@ -93,7 +93,7 @@ export type AgentMsg =
       /** Metrics per replica yang sedang berjalan di node ini. */
       instances?: InstanceMetric[];
     }
-  | { t: "log"; deploymentId: string; line: string }
+  | { t: "log"; deploymentId: string; line: string; stream?: "build" | "runtime" }
   | {
       /** Agent menghidupkan ulang replica yang mati/hang (auto-heal). */
       t: "instance-event";

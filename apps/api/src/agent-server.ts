@@ -124,12 +124,24 @@ function sendTo(nodeId: string, msg: ServerMsg): boolean {
   return true;
 }
 
-async function log(deploymentId: string, line: string) {
-  const stamped = `[${new Date().toISOString()}] ${line}`;
+// Penanda tak-terlihat di awal baris = log runtime/akses (bukan build).
+// Aman disimpan di Postgres (bukan null byte) & di-parse UI jadi tab terpisah.
+const RUNTIME_MARK = "\x1f";
+async function log(
+  deploymentId: string,
+  line: string,
+  stream?: "build" | "runtime",
+) {
+  const mark = stream === "runtime" ? RUNTIME_MARK : "";
+  const ts = new Date().toISOString();
   const buf = logBuffers.get(deploymentId) ?? [];
-  buf.push(stamped);
+  // Chunk bisa multi-baris (stdout container) — stempel & tandai tiap baris.
+  for (const raw of line.split("\n")) {
+    const stamped = `${mark}[${ts}] ${raw}`;
+    buf.push(stamped);
+    await publishLog(deploymentId, stamped);
+  }
   logBuffers.set(deploymentId, buf);
-  await publishLog(deploymentId, stamped);
 }
 
 /** Kirim job deploy — satu job per replica, ke node masing-masing. */
@@ -511,7 +523,7 @@ export function attachAgentServer(server: Server): void {
       }
 
       if (msg.t === "log") {
-        await log(msg.deploymentId, msg.line);
+        await log(msg.deploymentId, msg.line, msg.stream);
         return;
       }
 

@@ -127,6 +127,20 @@ function sendTo(nodeId: string, msg: ServerMsg): boolean {
 // Penanda tak-terlihat di awal baris = log runtime/akses (bukan build).
 // Aman disimpan di Postgres (bukan null byte) & di-parse UI jadi tab terpisah.
 const RUNTIME_MARK = "\x1f";
+// Buffer runtime/akses: rolling per deployment (volume bisa besar → di-cap).
+// Build log tetap di logBuffers (di-snapshot permanen ke DB saat settle).
+const RUNTIME_MAX = 500;
+const runtimeBuffers = new Map<string, string[]>();
+
+/** Ekor log runtime/akses terakhir (untuk di-replay saat SSE reconnect). */
+export function getRuntimeTail(deploymentId: string): string {
+  return (runtimeBuffers.get(deploymentId) ?? []).join("\n");
+}
+/** Lupakan buffer runtime (saat service stop/dihapus/digantikan). */
+export function forgetRuntimeLogs(deploymentId: string): void {
+  runtimeBuffers.delete(deploymentId);
+}
+
 async function log(
   deploymentId: string,
   line: string,
@@ -134,14 +148,21 @@ async function log(
 ) {
   const mark = stream === "runtime" ? RUNTIME_MARK : "";
   const ts = new Date().toISOString();
-  const buf = logBuffers.get(deploymentId) ?? [];
   // Chunk bisa multi-baris (stdout container) — stempel & tandai tiap baris.
   for (const raw of line.split("\n")) {
     const stamped = `${mark}[${ts}] ${raw}`;
-    buf.push(stamped);
+    if (stream === "runtime") {
+      const rb = runtimeBuffers.get(deploymentId) ?? [];
+      rb.push(stamped);
+      if (rb.length > RUNTIME_MAX) rb.splice(0, rb.length - RUNTIME_MAX);
+      runtimeBuffers.set(deploymentId, rb);
+    } else {
+      const buf = logBuffers.get(deploymentId) ?? [];
+      buf.push(stamped);
+      logBuffers.set(deploymentId, buf);
+    }
     await publishLog(deploymentId, stamped);
   }
-  logBuffers.set(deploymentId, buf);
 }
 
 /** Kirim job deploy — satu job per replica, ke node masing-masing. */
@@ -244,6 +265,7 @@ async function settleDeployment(deploymentId: string): Promise<void> {
     });
     if (olds.length) {
       const ids = olds.map((o) => o.id);
+      for (const oid of ids) forgetRuntimeLogs(oid); // rilis lama tak lagi menerima log
       await prisma.instance.updateMany({
         where: { deploymentId: { in: ids }, status: "RUNNING" },
         data: { status: "STOPPED" },

@@ -6,6 +6,7 @@ import { Redis } from "ioredis";
 import { prisma } from "@minipaas/db";
 import { verifyApiToken } from "@minipaas/auth";
 import { logBus, logChannel } from "@minipaas/worker/logs";
+import { getRuntimeTail } from "../agent-server.js";
 
 export const logs = new Hono();
 
@@ -38,6 +39,11 @@ logs.get("/:deploymentId/stream", async (c) => {
     });
     if (existing?.logs) {
       await stream.writeSSE({ event: "log", data: existing.logs });
+    }
+    // Ekor log runtime/akses terakhir (rolling) → bertahan saat refresh browser.
+    const rtail = getRuntimeTail(deploymentId);
+    if (rtail) {
+      await stream.writeSSE({ event: "log", data: rtail });
     }
 
     // 2. Berlangganan log realtime.

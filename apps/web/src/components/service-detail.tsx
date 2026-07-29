@@ -50,6 +50,7 @@ export function ServiceDetailView({
   const [tab, setTab] = useState<Tab>("deployments");
   const [selectedDep, setSelectedDep] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [deploying, setDeploying] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!token) return;
@@ -77,8 +78,9 @@ export function ServiceDetailView({
   const url = live ? svc.url : null;
 
   async function handleDeploy() {
-    if (!token) return;
+    if (!token || deploying) return;
     setErr(null);
+    setDeploying(true);
     try {
       const depId = await deployService(token, id);
       if (depId) {
@@ -87,7 +89,11 @@ export function ServiceDetailView({
       }
       refresh();
     } catch (e) {
+      // Surel jelas ke user + log ke console untuk diagnosa.
+      console.error("[deploy] gagal:", e);
       setErr((e as Error).message);
+    } finally {
+      setDeploying(false);
     }
   }
 
@@ -168,8 +174,12 @@ export function ServiceDetailView({
               <IconGlobe className="h-3.5 w-3.5" /> Buka
             </a>
           )}
-          <button onClick={handleDeploy} className="btn-primary rounded-lg px-3 py-1.5 text-xs font-semibold">
-            Deploy
+          <button
+            onClick={handleDeploy}
+            disabled={deploying}
+            className="btn-primary rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-60"
+          >
+            {deploying ? "Deploying…" : "Deploy"}
           </button>
           {svc.status === "RUNNING" && (
             <button

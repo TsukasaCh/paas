@@ -29,8 +29,17 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "settings", label: "Settings" },
 ];
 
-export default function ServiceDetailPage() {
-  const { id } = useParams<{ id: string }>();
+export function ServiceDetailView({
+  id,
+  variant = "page",
+  onClose,
+  onDeleted,
+}: {
+  id: string;
+  variant?: "page" | "drawer";
+  onClose?: () => void;
+  onDeleted?: () => void;
+}) {
   const router = useRouter();
   const { data: session } = useSession();
   const token = session?.apiToken;
@@ -81,18 +90,48 @@ export default function ServiceDetailPage() {
     }
   }
 
+  const isDrawer = variant === "drawer";
+
   return (
-    <div className="mx-auto max-w-5xl px-8 py-8">
-      {/* Breadcrumb */}
-      <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
-        <Link href="/dashboard" className="hover:text-foreground">
-          Projects
-        </Link>
-        <span>/</span>
-        <span>{svc.project.name}</span>
-        <span>/</span>
-        <span className="text-foreground">{svc.name}</span>
-      </div>
+    <div
+      className={
+        isDrawer
+          ? "flex h-full flex-col overflow-hidden bg-[#0b0b10]"
+          : "mx-auto max-w-5xl px-8 py-8"
+      }
+    >
+      {isDrawer ? (
+        <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-3">
+          <div className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
+            <Link href="/dashboard" className="hover:text-foreground">
+              Projects
+            </Link>
+            <span>/</span>
+            <span className="truncate">{svc.project.name}</span>
+            <span>/</span>
+            <span className="truncate text-foreground">{svc.name}</span>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Tutup"
+            className="btn-ghost shrink-0 rounded-lg p-1.5"
+          >
+            <IconX className="h-4 w-4" />
+          </button>
+        </div>
+      ) : (
+        <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
+          <Link href="/dashboard" className="hover:text-foreground">
+            Projects
+          </Link>
+          <span>/</span>
+          <span>{svc.project.name}</span>
+          <span>/</span>
+          <span className="text-foreground">{svc.name}</span>
+        </div>
+      )}
+
+      <div className={isDrawer ? "flex-1 overflow-y-auto px-5 py-5" : ""}>
 
       {/* Header */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
@@ -224,11 +263,17 @@ export default function ServiceDetailPage() {
           token={token}
           svc={svc}
           onSaved={refresh}
-          onDeleted={() => router.push("/dashboard")}
+          onDeleted={onDeleted ?? (() => router.push("/dashboard"))}
         />
       )}
+      </div>
     </div>
   );
+}
+
+export default function ServiceDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  return <ServiceDetailView id={id} variant="page" />;
 }
 
 function Empty({ text }: { text: string }) {

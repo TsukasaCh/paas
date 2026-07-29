@@ -9,6 +9,7 @@ import { updateService, deleteProject } from "@/lib/api";
 import { ServiceStatusBadge } from "@/components/service-status-badge";
 import { AddServiceDialog } from "@/components/add-service-dialog";
 import { IconRocket, IconDatabase } from "@/components/icons";
+import { ServiceDetailView } from "@/app/dashboard/services/[id]/page";
 
 const CARD_W = 220;
 const CARD_H = 96;
@@ -22,6 +23,8 @@ export default function ProjectCanvasPage() {
   const project = projects.find((p) => p.id === id);
   const [delOpen, setDelOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  // Service yang detailnya sedang dibuka di drawer (null = tertutup).
+  const [openSvc, setOpenSvc] = useState<string | null>(null);
 
   // Posisi lokal saat drag (biar responsif tanpa nunggu server).
   const [pos, setPos] = useState<Record<string, { x: number; y: number }>>({});
@@ -97,15 +100,15 @@ export default function ProjectCanvasPage() {
     const d = drag.current;
     drag.current = null;
     if (!d) return;
-    // Tidak digeser → perlakukan sebagai klik: buka detail service.
+    // Tidak digeser → perlakukan sebagai klik: buka detail service di drawer.
     if (!d.moved) {
-      router.push(`/dashboard/services/${d.id}`);
+      setOpenSvc(d.id);
       return;
     }
     if (!token) return;
     const p = posRef.current[d.id]; // baca dari ref, bukan state
     if (p) updateService(token, d.id, { posX: p.x, posY: p.y }).catch(() => {});
-  }, [token, router]);
+  }, [token]);
 
   useEffect(() => {
     window.addEventListener("mousemove", onMouseMove);
@@ -115,6 +118,16 @@ export default function ProjectCanvasPage() {
       window.removeEventListener("mouseup", onMouseUp);
     };
   }, [onMouseMove, onMouseUp]);
+
+  // Tutup drawer detail service dengan tombol Escape.
+  useEffect(() => {
+    if (!openSvc) return;
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpenSvc(null);
+    };
+    window.addEventListener("keydown", onEsc);
+    return () => window.removeEventListener("keydown", onEsc);
+  }, [openSvc]);
 
   if (!project)
     return <p className="p-10 text-sm text-muted-foreground">Memuat project…</p>;
@@ -274,6 +287,22 @@ export default function ProjectCanvasPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Drawer detail service (ala Railway): canvas tetap terlihat di kiri. */}
+      {openSvc && (
+        <aside className="fixed inset-y-0 right-0 z-40 flex w-full max-w-[760px] flex-col border-l border-border bg-[#0b0b10] shadow-2xl shadow-black/50">
+          <ServiceDetailView
+            key={openSvc}
+            id={openSvc}
+            variant="drawer"
+            onClose={() => setOpenSvc(null)}
+            onDeleted={() => {
+              setOpenSvc(null);
+              if (token) fetchProjects(token);
+            }}
+          />
+        </aside>
       )}
     </div>
   );

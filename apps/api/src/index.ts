@@ -17,6 +17,7 @@ import github from "./routes/github.js";
 import webhooks from "./routes/webhooks.js";
 import logs from "./routes/logs.js";
 import admin from "./routes/admin.js";
+import me from "./routes/me.js";
 import { attachAgentServer } from "./agent-server.js";
 import { startProxyServer, slugFromHost } from "./proxy-server.js";
 import { getAppDomain } from "./lib/dns.js";
@@ -171,6 +172,7 @@ fi
 app.route("/projects", projects);
 app.route("/github", github);
 app.route("/admin", admin);
+app.route("/me", me);
 // Webhook diverifikasi lewat HMAC signature; logs SSE lewat token query param.
 app.route("/webhooks", webhooks);
 app.route("/logs", logs);

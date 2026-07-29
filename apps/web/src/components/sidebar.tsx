@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { NewProjectButton } from "./new-project-button";
+import { UsageCard } from "./usage-card";
 
 const ICON: Record<string, React.ReactNode> = {
   projects: <path d="M3 3h7v7H3V3zm11 0h7v7h-7V3zM3 14h7v7H3v-7zm11 0h7v7h-7v-7z" />,
@@ -87,6 +88,10 @@ export function Sidebar({
       </nav>
 
       <div className="flex-1" />
+
+      <div className="px-3 pb-1">
+        <UsageCard />
+      </div>
 
       <div className="border-t border-border p-3">
         <div className="flex items-center gap-2.5">

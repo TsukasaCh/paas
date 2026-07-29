@@ -225,3 +225,23 @@ export async function deleteProject(
   });
   if (!res.ok) throw new Error(`Gagal hapus project (${res.status})`);
 }
+
+export interface Usage {
+  plan: "FREE" | "PRO" | "ENTERPRISE";
+  limits: { label: string; memoryMb: number; cpus: number; maxReplicas: number };
+  usage: {
+    projects: number;
+    services: number;
+    runningServices: number;
+    replicasRunning: number;
+    memMb: number;
+    cpuPct: number;
+  };
+}
+
+// GET /me/usage — paket + pemakaian live user (untuk kartu sidebar).
+export async function getUsage(token: string): Promise<Usage> {
+  const r = await fetch(`${API}/me/usage`, { headers: headers(token) });
+  if (!r.ok) throw new Error(`Gagal memuat usage (${r.status})`);
+  return r.json();
+}

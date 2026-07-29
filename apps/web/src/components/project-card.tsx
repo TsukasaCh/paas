@@ -48,10 +48,10 @@ export function ProjectCard({
     return (
       <Link
         href={href}
-        className="group flex items-center gap-4 rounded-2xl border border-border bg-card p-5 transition-colors hover:border-violet-500/40"
+        className="group flex items-center gap-4 rounded-2xl border border-border bg-card px-5 py-4 transition-colors hover:border-violet-500/40"
       >
-        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-surface2 text-muted-foreground ring-1 ring-inset ring-border">
-          <IconFolder className="h-5 w-5" />
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-surface2 text-muted-foreground ring-1 ring-inset ring-border">
+          <IconFolder className="h-4 w-4" />
         </span>
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-base font-semibold tracking-tight group-hover:text-violet-200">
@@ -62,6 +62,19 @@ export function ProjectCard({
             {footer}
           </div>
         </div>
+
+        {/* Node service inline — mengisi baris & memperlihatkan arsitektur sekilas */}
+        {total > 0 && (
+          <div className="hidden shrink-0 items-center gap-2 sm:flex">
+            {svcs.slice(0, 5).map((s) => (
+              <NodeTile key={s.id} s={s} size="sm" />
+            ))}
+            {total > 5 && (
+              <span className="text-xs font-medium text-muted-foreground">+{total - 5}</span>
+            )}
+          </div>
+        )}
+
         <span className="shrink-0 text-sm text-violet-400 opacity-0 transition-opacity group-hover:opacity-100">
           Buka →
         </span>
@@ -116,7 +129,7 @@ export function ProjectCard({
   );
 }
 
-function NodeTile({ s }: { s: Service }) {
+function NodeTile({ s, size = "md" }: { s: Service; size?: "md" | "sm" }) {
   const dot =
     s.status === "RUNNING"
       ? "bg-emerald-400"
@@ -125,17 +138,24 @@ function NodeTile({ s }: { s: Service }) {
         : s.status === "DEPLOYING"
           ? "bg-amber-400 animate-pulse"
           : "bg-zinc-500";
+  const sm = size === "sm";
   return (
     <span
       title={`${s.name} · ${s.status.toLowerCase()}`}
-      className="relative grid h-12 w-12 place-items-center rounded-xl border border-border bg-card text-violet-200 shadow-md shadow-black/30 ring-1 ring-inset ring-white/5"
+      className={`relative grid place-items-center border border-border bg-card text-violet-200 shadow-md shadow-black/30 ring-1 ring-inset ring-white/5 ${
+        sm ? "h-8 w-8 rounded-lg" : "h-12 w-12 rounded-xl"
+      }`}
     >
       {s.type === "DATABASE" ? (
-        <IconDatabase className="h-5 w-5" />
+        <IconDatabase className={sm ? "h-4 w-4" : "h-5 w-5"} />
       ) : (
-        <IconRocket className="h-5 w-5" />
+        <IconRocket className={sm ? "h-4 w-4" : "h-5 w-5"} />
       )}
-      <span className={`absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full ring-2 ring-card ${dot}`} />
+      <span
+        className={`absolute rounded-full ring-2 ring-card ${dot} ${
+          sm ? "-right-0.5 -top-0.5 h-2 w-2" : "-right-1 -top-1 h-2.5 w-2.5"
+        }`}
+      />
     </span>
   );
 }

@@ -51,6 +51,8 @@ export function UsageCard() {
   const maxServices = u?.limits.maxServices ?? 0;
   const capMb = perReplicaMb > 0 && maxServices > 0 ? perReplicaMb * maxServices : 0;
   const usedMb = u?.usage.memMb ?? 0;
+  const runningSvc = u?.usage.runningServices ?? 0;
+  const overLimit = maxServices > 0 && runningSvc > maxServices;
   const pct = capMb > 0 ? Math.min(100, Math.round((usedMb / capMb) * 100)) : 0;
   const planLabel = u?.limits.label ?? plan.charAt(0) + plan.slice(1).toLowerCase();
 
@@ -96,17 +98,17 @@ export function UsageCard() {
         </div>
       )}
 
-      {/* Ringkasan */}
+      {/* Ringkasan — Service = berjalan / batas paket */}
       <div className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-[11px]">
         <div className="flex items-center justify-between">
           <span className="text-muted-foreground">Service</span>
-          <span className="font-mono">
-            {u?.usage.runningServices ?? 0}/{u?.usage.services ?? 0}
+          <span className={`font-mono ${overLimit ? "text-amber-300" : ""}`}>
+            {runningSvc}/{maxServices > 0 ? maxServices : "∞"}
           </span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-muted-foreground">Replika</span>
-          <span className="font-mono">{u?.usage.replicasRunning ?? 0}</span>
+          <span className="text-muted-foreground">CPU</span>
+          <span className="font-mono">{u?.usage.cpuPct ?? 0}%</span>
         </div>
       </div>
     </div>

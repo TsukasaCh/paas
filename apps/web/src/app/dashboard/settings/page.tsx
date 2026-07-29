@@ -275,8 +275,11 @@ function PlanPanel({ token }: { token?: string }) {
 
         <div className="mt-3 grid grid-cols-3 gap-3">
           <MiniStat label="Proyek" value={u?.usage.projects ?? 0} />
-          <MiniStat label="Service" value={`${u?.usage.runningServices ?? 0}/${u?.usage.services ?? 0}`} />
-          <MiniStat label="Replika" value={u?.usage.replicasRunning ?? 0} />
+          <MiniStat
+            label="Service jalan"
+            value={`${u?.usage.runningServices ?? 0}/${maxServices > 0 ? maxServices : "∞"}`}
+          />
+          <MiniStat label="CPU" value={`${u?.usage.cpuPct ?? 0}%`} />
         </div>
       </PanelCard>
 

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { NewProjectButton } from "./new-project-button";
 
 const ICON: Record<string, React.ReactNode> = {
   projects: <path d="M3 3h7v7H3V3zm11 0h7v7h-7V3zM3 14h7v7H3v-7zm11 0h7v7h-7v-7z" />,
@@ -23,11 +24,9 @@ const NAV = [
 
 export function Sidebar({
   userName,
-  onNewProject,
   onLogout,
 }: {
   userName?: string | null;
-  onNewProject: () => void;
   onLogout: () => void;
 }) {
   const pathname = usePathname();
@@ -52,12 +51,10 @@ export function Sidebar({
       </Link>
 
       <div className="p-3">
-        <button
-          onClick={onNewProject}
-          className="btn-primary w-full rounded-lg px-3 py-2 text-sm font-semibold"
-        >
-          + New Project
-        </button>
+        <NewProjectButton
+          triggerLabel="+ New Project"
+          triggerClassName="btn-primary w-full rounded-lg px-3 py-2 text-sm font-semibold"
+        />
       </div>
 
       <nav className="flex flex-col gap-1 px-3">

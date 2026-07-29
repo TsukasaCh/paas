@@ -85,3 +85,51 @@ export function IconCheck({ className }: { className?: string }) {
     </Ic>
   );
 }
+export function IconGit({ className }: { className?: string }) {
+  return (
+    <Ic className={className}>
+      <line x1="6" y1="3" x2="6" y2="15" />
+      <circle cx="18" cy="6" r="3" />
+      <circle cx="6" cy="18" r="3" />
+      <path d="M18 9a9 9 0 0 1-9 9" />
+    </Ic>
+  );
+}
+export function IconLayers({ className }: { className?: string }) {
+  return (
+    <Ic className={className}>
+      <path d="M12 2 2 7l10 5 10-5-10-5z" />
+      <path d="m2 17 10 5 10-5" />
+      <path d="m2 12 10 5 10-5" />
+    </Ic>
+  );
+}
+export function IconPlus({ className }: { className?: string }) {
+  return (
+    <Ic className={className}>
+      <path d="M12 5v14M5 12h14" />
+    </Ic>
+  );
+}
+export function IconGrid({ className }: { className?: string }) {
+  return (
+    <Ic className={className}>
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="14" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+    </Ic>
+  );
+}
+export function IconList({ className }: { className?: string }) {
+  return (
+    <Ic className={className}>
+      <line x1="8" y1="6" x2="21" y2="6" />
+      <line x1="8" y1="12" x2="21" y2="12" />
+      <line x1="8" y1="18" x2="21" y2="18" />
+      <line x1="3" y1="6" x2="3.01" y2="6" />
+      <line x1="3" y1="12" x2="3.01" y2="12" />
+      <line x1="3" y1="18" x2="3.01" y2="18" />
+    </Ic>
+  );
+}

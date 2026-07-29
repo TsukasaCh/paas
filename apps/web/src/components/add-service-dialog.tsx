@@ -19,6 +19,9 @@ const DB_PRESETS = [
   { label: "MySQL", image: "mysql:8", port: 3306, env: [{ key: "MYSQL_ROOT_PASSWORD", value: "secret" }] },
 ];
 
+const TPL_CATS = ["Semua", "App", "Database", "Tool"] as const;
+type TplCat = (typeof TPL_CATS)[number];
+
 const f = "field w-full px-3 py-2 text-sm";
 
 export function AddServiceDialog({
@@ -40,6 +43,7 @@ export function AddServiceDialog({
 
   const [kind, setKind] = useState<Kind>("GITHUB");
   const [template, setTemplate] = useState<Template | null>(null);
+  const [tplCat, setTplCat] = useState<TplCat>("Semua");
   const [name, setName] = useState("");
   const [repoUrl, setRepoUrl] = useState("");
   const [branch, setBranch] = useState("main");
@@ -212,8 +216,27 @@ export function AddServiceDialog({
                 <p className="mb-2 text-xs text-muted-foreground">
                   Pilih template — kami isi konfigurasinya, kamu tinggal Deploy.
                 </p>
+
+                {/* Filter kategori */}
+                <div className="mb-3 flex flex-wrap gap-1.5">
+                  {TPL_CATS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setTplCat(c)}
+                      className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                        tplCat === c
+                          ? "border-violet-500/60 bg-violet-500/10 text-violet-200"
+                          : "border-border bg-surface2 text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+
                 <div className="grid grid-cols-2 gap-2">
-                  {TEMPLATES.map((t) => (
+                  {TEMPLATES.filter((t) => tplCat === "Semua" || t.category === tplCat).map((t) => (
                     <button
                       key={t.id}
                       type="button"
@@ -222,7 +245,7 @@ export function AddServiceDialog({
                     >
                       <div className="flex items-center gap-2">
                         <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-border bg-background text-violet-300">
-                          {catIcon(t.category)}
+                          {catIcon(t)}
                         </span>
                         <span className="truncate text-sm font-medium">{t.name}</span>
                       </div>
@@ -448,10 +471,10 @@ export function AddServiceDialog({
   );
 }
 
-function catIcon(cat: Template["category"]): ReactNode {
-  if (cat === "Database") return <IcoDb />;
-  if (cat === "Tool") return <IcoCog />;
-  return <IcoGit />;
+function catIcon(t: Template): ReactNode {
+  if (t.category === "Database") return <IcoDb />;
+  if (t.category === "Tool") return <IcoCog />;
+  return t.source === "IMAGE" ? <IcoBox /> : <IcoGit />;
 }
 
 // ── Ikon garis ──

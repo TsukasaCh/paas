@@ -8,6 +8,7 @@ import { useProjectStore, type Service } from "@/store/use-project-store";
 import { updateService } from "@/lib/api";
 import { ServiceStatusBadge } from "@/components/service-status-badge";
 import { AddServiceDialog } from "@/components/add-service-dialog";
+import { IconRocket, IconDatabase } from "@/components/icons";
 
 const CARD_W = 220;
 const CARD_H = 96;
@@ -155,8 +156,12 @@ export default function ProjectCanvasPage() {
               }`}
             >
               <div className="flex items-center gap-2">
-                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-violet-500/20 to-fuchsia-500/10 text-sm ring-1 ring-inset ring-white/5">
-                  {s.type === "DATABASE" ? "🗄️" : "🚀"}
+                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-violet-500/20 to-fuchsia-500/10 text-violet-200 ring-1 ring-inset ring-white/5">
+                  {s.type === "DATABASE" ? (
+                    <IconDatabase className="h-3.5 w-3.5" />
+                  ) : (
+                    <IconRocket className="h-3.5 w-3.5" />
+                  )}
                 </span>
                 <span className="truncate text-sm font-medium">{s.name}</span>
               </div>

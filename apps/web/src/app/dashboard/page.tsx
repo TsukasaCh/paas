@@ -55,7 +55,7 @@ export default function ProjectsPage() {
         ) : (
           <div className={view === "grid" ? "grid gap-5 lg:grid-cols-2" : "grid gap-5"}>
             {projects.map((p) => (
-              <ProjectCard key={p.id} project={p} />
+              <ProjectCard key={p.id} project={p} variant={view === "grid" ? "card" : "row"} />
             ))}
           </div>
         )}

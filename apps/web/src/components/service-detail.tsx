@@ -77,6 +77,13 @@ export function ServiceDetailView({
   const live = svc.deployments.find((d) => d.status === "RUNNING");
   const url = live ? svc.url : null;
 
+  // Sedang deploy → kunci tombol agar tidak memicu deploy ganda (rebutan nama
+  // container → 409). Diambil dari status deployment terbaru.
+  const inFlight = ["QUEUED", "BUILDING", "DEPLOYING"].includes(
+    svc.deployments[0]?.status ?? "",
+  );
+  const busy = deploying || inFlight;
+
   async function handleDeploy() {
     if (!token || deploying) return;
     setErr(null);
@@ -176,10 +183,10 @@ export function ServiceDetailView({
           )}
           <button
             onClick={handleDeploy}
-            disabled={deploying}
+            disabled={busy}
             className="btn-primary rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-60"
           >
-            {deploying ? "Deploying…" : "Deploy"}
+            {busy ? "Deploying…" : "Deploy"}
           </button>
           {svc.status === "RUNNING" && (
             <button
@@ -191,7 +198,8 @@ export function ServiceDetailView({
           )}
           <button
             onClick={() => token && restartService(token, id).then(refresh)}
-            className="btn-ghost rounded-lg px-3 py-1.5 text-xs"
+            disabled={busy}
+            className="btn-ghost rounded-lg px-3 py-1.5 text-xs disabled:opacity-60"
           >
             Restart
           </button>

@@ -35,6 +35,15 @@ async function ownedService(serviceId: string, userId: string) {
   });
 }
 
+// True bila service masih punya deployment berjalan. Dipakai untuk menolak
+// deploy/restart ganda yang akan berebut nama container (rc_<svc>_<idx>) → 409.
+async function hasActiveDeployment(serviceId: string) {
+  return !!(await prisma.deployment.findFirst({
+    where: { serviceId, status: { in: ["QUEUED", "BUILDING", "DEPLOYING"] } },
+    select: { id: true },
+  }));
+}
+
 /**
  * Buat Deployment + satu Instance per replica, masing-masing sudah dipetakan
  * ke node. Mengembalikan { error } bila kapasitas tidak cukup.
@@ -292,6 +301,9 @@ projects.post("/services/:id/deploy", async (c) => {
   const service = await ownedService(serviceId, userId);
   if (!service) return c.json({ error: "Forbidden" }, 403);
 
+  if (await hasActiveDeployment(serviceId))
+    return c.json({ error: "Deployment sedang berjalan — tunggu sampai selesai." }, 409);
+
   const deployment = await createDeployment(service);
   if ("error" in deployment) return c.json({ error: deployment.error }, 503);
   await enqueueDeployment(deployment.id);
@@ -315,6 +327,9 @@ projects.post("/services/:id/restart", async (c) => {
   const serviceId = c.req.param("id");
   const service = await ownedService(serviceId, userId);
   if (!service) return c.json({ error: "Forbidden" }, 403);
+
+  if (await hasActiveDeployment(serviceId))
+    return c.json({ error: "Deployment sedang berjalan — tunggu sampai selesai." }, 409);
 
   const deployment = await createDeployment(service);
   if ("error" in deployment) return c.json({ error: deployment.error }, 503);

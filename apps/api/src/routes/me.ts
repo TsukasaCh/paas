@@ -159,6 +159,7 @@ me.get("/usage", async (c) => {
       memoryMb: limits.memoryMb, // per replica; 0 = unlimited
       cpus: limits.cpus, // per replica; 0 = unlimited
       maxReplicas: limits.maxReplicas,
+      maxServices: limits.maxServices, // service berjalan bersamaan; 0 = unlimited
     },
     usage: {
       projects,

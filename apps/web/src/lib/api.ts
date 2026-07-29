@@ -228,7 +228,7 @@ export async function deleteProject(
 
 export interface Usage {
   plan: "FREE" | "PRO" | "ENTERPRISE";
-  limits: { label: string; memoryMb: number; cpus: number; maxReplicas: number };
+  limits: { label: string; memoryMb: number; cpus: number; maxReplicas: number; maxServices: number };
   usage: {
     projects: number;
     services: number;

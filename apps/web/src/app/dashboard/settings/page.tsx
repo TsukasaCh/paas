@@ -212,9 +212,9 @@ function SecurityPanel({ token, me }: { token?: string; me: Me | null }) {
 
 // ── Paket & Pemakaian ──────────────────────────────────────────
 const PLANS: { id: string; label: string; quota: string[] }[] = [
-  { id: "FREE", label: "Free", quota: ["256 MB RAM / replika", "Shared CPU", "1 replika / service"] },
-  { id: "PRO", label: "Pro", quota: ["4 GB RAM / replika", "2 core CPU", "2 replika / service"] },
-  { id: "ENTERPRISE", label: "Enterprise", quota: ["RAM & CPU unlimited", "Replika banyak", "Via lisensi"] },
+  { id: "FREE", label: "Free", quota: ["256 MB RAM / replika", "1 service berjalan", "Shared CPU · 1 replika"] },
+  { id: "PRO", label: "Pro", quota: ["4 GB RAM / replika", "3 service berjalan", "2 core CPU · 2 replika"] },
+  { id: "ENTERPRISE", label: "Enterprise", quota: ["RAM & CPU unlimited", "Service tak terbatas", "Via lisensi"] },
 ];
 
 function fmtMem(mb: number) {
@@ -229,8 +229,8 @@ function PlanPanel({ token }: { token?: string }) {
 
   const current = u?.plan ?? "FREE";
   const perReplicaMb = u?.limits.memoryMb ?? 0;
-  const replicas = u?.usage.replicasRunning ?? 0;
-  const capMb = perReplicaMb > 0 ? replicas * perReplicaMb : 0;
+  const maxServices = u?.limits.maxServices ?? 0;
+  const capMb = perReplicaMb > 0 && maxServices > 0 ? perReplicaMb * maxServices : 0;
   const usedMb = u?.usage.memMb ?? 0;
   const pct = capMb > 0 ? Math.min(100, Math.round((usedMb / capMb) * 100)) : 0;
 

@@ -45,11 +45,11 @@ export function UsageCard() {
   const plan = u?.plan ?? ((session?.plan as string) ?? "FREE");
   const badge = PLAN_BADGE[plan] ?? PLAN_BADGE.FREE;
 
-  // Meter RAM = pemakaian vs RAM yang dialokasikan ke container yang berjalan.
-  // Tiap replica dibatasi `memoryMb` oleh paket (0 = unlimited → tanpa meter).
+  // Meter RAM = pemakaian vs BUDGET RAM paket (tetap) = RAM/replica × maks
+  // service. 0 = unlimited → tanpa meter. Budget tetap agar angkanya konsisten.
   const perReplicaMb = u?.limits.memoryMb ?? 0;
-  const replicas = u?.usage.replicasRunning ?? 0;
-  const capMb = perReplicaMb > 0 ? replicas * perReplicaMb : 0;
+  const maxServices = u?.limits.maxServices ?? 0;
+  const capMb = perReplicaMb > 0 && maxServices > 0 ? perReplicaMb * maxServices : 0;
   const usedMb = u?.usage.memMb ?? 0;
   const pct = capMb > 0 ? Math.min(100, Math.round((usedMb / capMb) * 100)) : 0;
   const planLabel = u?.limits.label ?? plan.charAt(0) + plan.slice(1).toLowerCase();

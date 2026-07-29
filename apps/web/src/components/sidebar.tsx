@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { NewProjectButton } from "./new-project-button";
 import { UsageCard } from "./usage-card";
 
 const ICON: Record<string, React.ReactNode> = {
@@ -51,14 +50,7 @@ export function Sidebar({
         </span>
       </Link>
 
-      <div className="p-3">
-        <NewProjectButton
-          triggerLabel="+ New Project"
-          triggerClassName="btn-primary w-full rounded-lg px-3 py-2 text-sm font-semibold"
-        />
-      </div>
-
-      <nav className="flex flex-col gap-1 px-3">
+      <nav className="mt-3 flex flex-col gap-1 px-3">
         {NAV.map((item) => (
           <Link
             key={item.key}

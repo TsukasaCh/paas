@@ -304,6 +304,26 @@ projects.post("/services/:id/deploy", async (c) => {
   if (await hasActiveDeployment(serviceId))
     return c.json({ error: "Deployment sedang berjalan — tunggu sampai selesai." }, 409);
 
+  // Batas paket: maksimal N service berjalan bersamaan (Free = 1). Hanya
+  // menghalangi START service baru; redeploy service yang sudah RUNNING bebas.
+  const owner = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { plan: true },
+  });
+  const limits = limitsFor(owner?.plan);
+  if (limits.maxServices > 0 && service.status !== "RUNNING") {
+    const runningOthers = await prisma.service.count({
+      where: { project: { ownerId: userId }, status: "RUNNING", id: { not: serviceId } },
+    });
+    if (runningOthers >= limits.maxServices)
+      return c.json(
+        {
+          error: `Paket ${limits.label} maksimal ${limits.maxServices} service berjalan. Stop service lain dulu atau upgrade.`,
+        },
+        403,
+      );
+  }
+
   const deployment = await createDeployment(service);
   if ("error" in deployment) return c.json({ error: deployment.error }, 503);
   await enqueueDeployment(deployment.id);

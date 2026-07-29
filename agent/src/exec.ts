@@ -223,12 +223,16 @@ async function runDocker(job: DeployJobSpec, port: number, log: Log) {
     await buildImage(workDir, imageTag, log, job);
   }
 
+  // Nama container deterministik per replica → sama antar-deploy service ini.
+  const containerName = `rc_${job.serviceId}_${job.replicaIndex}`.toLowerCase();
   await removeContainerFor(job.instanceId);
+  // Redeploy: deployment baru punya instanceId beda, tapi container LAMA memakai
+  // nama yang sama → buang by-nama juga, kalau tidak createContainer 409 Conflict.
+  await removeContainerByName(containerName);
   log(`Menjalankan container replica #${job.replicaIndex} → :${port}`);
   const container = await docker.createContainer({
     Image: imageTag,
-    // Nama unik per replica agar beberapa replica bisa hidup bersama.
-    name: `rc_${job.serviceId}_${job.replicaIndex}`.toLowerCase(),
+    name: containerName,
     // PORT=containerPort DIPAKSA terakhir: app (mis. hasil Nixpacks) yang baca
     // process.env.PORT akan bind ke port yang benar-benar di-expose & di-map.
     Env: [...Object.entries(job.env).map(([k, v]) => `${k}=${v}`), `PORT=${job.containerPort}`],
@@ -352,6 +356,11 @@ async function removeContainerFor(instanceId: string) {
   for (const info of list) {
     await docker.getContainer(info.Id).remove({ force: true }).catch(() => {});
   }
+}
+
+/** Buang container berdasarkan nama (idempoten) — untuk redeploy nama sama. */
+async function removeContainerByName(name: string) {
+  await docker.getContainer(name).remove({ force: true }).catch(() => {});
 }
 
 async function removeContainersOfService(serviceId: string) {

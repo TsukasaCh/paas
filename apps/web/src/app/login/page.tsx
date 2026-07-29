@@ -1,8 +1,8 @@
 "use client";
 // Login: username/email + password (utama), GitHub opsional.
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
   AuthShell,
@@ -15,6 +15,12 @@ import {
 
 export default function LoginPage() {
   const router = useRouter();
+  const { status } = useSession();
+
+  // Sudah login → langsung ke dashboard (jangan tampilkan form lagi).
+  useEffect(() => {
+    if (status === "authenticated") router.replace("/dashboard");
+  }, [status, router]);
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);

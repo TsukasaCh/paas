@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { LandingNavAuth } from "@/components/landing-nav-auth";
 
 // Landing page (marketing). Benefit-focused, tanpa jargon internal.
 export default function Landing() {
@@ -19,18 +20,7 @@ export default function Landing() {
             <a href="#cara" className="transition-colors hover:text-foreground">Cara kerja</a>
           </div>
           <div className="ml-auto flex items-center gap-2">
-            <Link
-              href="/login"
-              className="btn-ghost rounded-lg px-4 py-1.5 text-sm font-medium"
-            >
-              Masuk
-            </Link>
-            <Link
-              href="/register"
-              className="btn-primary rounded-lg px-4 py-1.5 text-sm font-semibold"
-            >
-              Mulai gratis
-            </Link>
+            <LandingNavAuth />
           </div>
         </div>
       </nav>

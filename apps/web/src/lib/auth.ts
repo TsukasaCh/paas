@@ -102,5 +102,7 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
-  session: { strategy: "jwt" },
+  // JWT disimpan di cookie persisten → tetap login walau tab/browser ditutup.
+  session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 }, // 30 hari
+
 };

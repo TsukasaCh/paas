@@ -32,6 +32,9 @@ export interface DeployJobSpec {
   containerPort: number;
   env: Record<string, string>;
   runtime: "node" | "docker";
+  /** Kuota paket user: batas RAM (MB) & CPU (core) per replica. 0 = tanpa batas. */
+  memoryMb?: number;
+  cpus?: number;
 }
 
 // ── Tunnel HTTP lewat WebSocket agent ──────────────────────────

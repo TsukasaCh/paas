@@ -14,6 +14,8 @@ import {
   type CreateNodeResult,
 } from "@/lib/admin-api";
 import { DnsSettings } from "@/components/dns-settings";
+import { AdminUsers } from "@/components/admin-users";
+import { IconShield, IconServer, IconBox, IconWarn, IconCheck } from "@/components/icons";
 
 export default function AdminPage() {
   const { data: session, status } = useSession();
@@ -51,8 +53,8 @@ export default function AdminPage() {
     <div className="min-h-screen">
       <header className="sticky top-0 z-40 border-b border-border bg-background/70 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-2 px-6">
-          <span className="grid h-6 w-6 place-items-center rounded-md bg-gradient-to-br from-amber-500 to-orange-500 text-[13px]">
-            🛡️
+          <span className="grid h-6 w-6 place-items-center rounded-md bg-gradient-to-br from-amber-500 to-orange-500 text-white">
+            <IconShield className="h-3.5 w-3.5" />
           </span>
           <span className="text-sm font-semibold">Admin Console</span>
           <span className="ml-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-amber-300">
@@ -91,8 +93,9 @@ export default function AdminPage() {
         </div>
 
         {stats && stats.online === 0 && (
-          <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-            ⚠️ Tidak ada node online — deployment user akan ditolak sampai ada agent
+          <div className="mb-6 flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+            <IconWarn className="h-4 w-4 shrink-0" />
+            Tidak ada node online — deployment user akan ditolak sampai ada agent
             yang terhubung.
           </div>
         )}
@@ -111,7 +114,9 @@ export default function AdminPage() {
           ))}
         </div>
 
-        <div className="mt-8">{token && <DnsSettings token={token} />}</div>
+        {token && <AdminUsers token={token} selfId={session.userId} />}
+
+        <div className="mt-10">{token && <DnsSettings token={token} />}</div>
       </main>
 
       {addOpen && token && (
@@ -155,8 +160,8 @@ function NodeRow({
 
   return (
     <div className="flex items-center gap-4 p-4">
-      <span className="grid h-10 w-10 place-items-center rounded-lg bg-surface2 text-lg">
-        🖥️
+      <span className="grid h-10 w-10 place-items-center rounded-lg bg-surface2 text-muted-foreground">
+        <IconServer className="h-5 w-5" />
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
@@ -178,8 +183,8 @@ function NodeRow({
             </span>
           )}
           {n.dockerAvailable && (
-            <span className="rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground">
-              🐳 docker
+            <span className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground">
+              <IconBox className="h-3 w-3" /> docker
             </span>
           )}
         </div>
@@ -343,9 +348,15 @@ function TokenModal({ res, onClose }: { res: CreateNodeResult; onClose: () => vo
                 setCopied(true);
                 setTimeout(() => setCopied(false), 1500);
               }}
-              className="btn-ghost rounded-md px-2 py-1 text-[11px]"
+              className="btn-ghost inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px]"
             >
-              {copied ? "✓ Tersalin" : "Salin"}
+              {copied ? (
+                <>
+                  <IconCheck className="h-3 w-3" /> Tersalin
+                </>
+              ) : (
+                "Salin"
+              )}
             </button>
           </div>
           <pre className="overflow-x-auto p-4 font-mono text-xs leading-5 text-zinc-300">

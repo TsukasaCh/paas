@@ -244,6 +244,9 @@ async function runDocker(job: DeployJobSpec, port: number, log: Log) {
     HostConfig: {
       PortBindings: { [`${job.containerPort}/tcp`]: [{ HostPort: String(port) }] },
       RestartPolicy: { Name: "unless-stopped" },
+      // Kuota paket user: 0/undefined = tanpa batas (Enterprise).
+      ...(job.memoryMb ? { Memory: job.memoryMb * 1024 * 1024 } : {}),
+      ...(job.cpus ? { NanoCpus: Math.round(job.cpus * 1e9) } : {}),
     },
   });
   await container.start();

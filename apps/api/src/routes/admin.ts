@@ -8,6 +8,7 @@ import { hashToken } from "../agent-server.js";
 import { isNodeOnline } from "../lib/scheduler.js";
 import { verifyToken, getZone } from "../lib/cloudflare.js";
 import { invalidateDnsCache, getPlatformDomains } from "../lib/dns.js";
+import { normalizePlan, PLANS } from "../lib/plans.js";
 import type { AppEnv } from "../types.js";
 
 export const admin = new Hono<AppEnv>();
@@ -146,6 +147,99 @@ admin.get("/stats", async (c) => {
     services,
     running,
   });
+});
+
+// ── User management ────────────────────────────────────────────
+// GET /admin/users — daftar semua user + paket, status, jumlah project/service.
+admin.get("/users", async (c) => {
+  const users = await prisma.user.findMany({
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      email: true,
+      username: true,
+      name: true,
+      image: true,
+      role: true,
+      plan: true,
+      status: true,
+      createdAt: true,
+      _count: { select: { projects: true } },
+    },
+  });
+  // Hitung service per owner (lewat project) untuk gambaran pemakaian.
+  const svc = await prisma.service.groupBy({
+    by: ["projectId"],
+    _count: { _all: true },
+  });
+  const projOwners = await prisma.project.findMany({ select: { id: true, ownerId: true } });
+  const svcByOwner = new Map<string, number>();
+  const ownerOf = new Map(projOwners.map((p) => [p.id, p.ownerId]));
+  for (const row of svc) {
+    const owner = ownerOf.get(row.projectId);
+    if (owner) svcByOwner.set(owner, (svcByOwner.get(owner) ?? 0) + row._count._all);
+  }
+  return c.json(
+    users.map((u) => ({
+      id: u.id,
+      email: u.email,
+      username: u.username,
+      name: u.name,
+      image: u.image,
+      role: u.role,
+      plan: normalizePlan(u.plan),
+      status: u.status,
+      createdAt: u.createdAt,
+      projects: u._count.projects,
+      services: svcByOwner.get(u.id) ?? 0,
+    })),
+  );
+});
+
+// PATCH /admin/users/:id — ubah paket dan/atau status (suspend/ban/aktifkan).
+admin.patch("/users/:id", async (c) => {
+  const id = c.req.param("id");
+  const selfId = c.get("userId");
+  const b = await c.req.json().catch(() => ({}) as any);
+
+  const target = await prisma.user.findUnique({ where: { id } });
+  if (!target) return c.json({ error: "User tidak ditemukan" }, 404);
+
+  const data: Record<string, unknown> = {};
+
+  if (b.plan !== undefined) {
+    const plan = normalizePlan(b.plan);
+    data.plan = plan;
+    // Enterprise butuh lisensi; catat kode bila diberikan, hapus bila turun paket.
+    if (plan === "ENTERPRISE") {
+      if (b.licenseKey) data.licenseKey = String(b.licenseKey).trim();
+    } else {
+      data.licenseKey = null;
+    }
+  }
+
+  if (b.status !== undefined) {
+    const status = String(b.status).toUpperCase();
+    if (!["ACTIVE", "SUSPENDED", "BANNED"].includes(status))
+      return c.json({ error: "Status tidak valid" }, 400);
+    // Admin tidak boleh mengunci akunnya sendiri.
+    if (id === selfId && status !== "ACTIVE")
+      return c.json({ error: "Tidak bisa suspend/ban akun sendiri." }, 400);
+    // Jangan biarkan admin lain diblokir oleh sesama admin (cegah kunci-mengunci).
+    if (target.role === "ADMIN" && id !== selfId && status !== "ACTIVE")
+      return c.json({ error: "Tidak bisa suspend/ban sesama admin." }, 400);
+    data.status = status;
+  }
+
+  if (Object.keys(data).length === 0)
+    return c.json({ error: "Tidak ada perubahan" }, 400);
+
+  const user = await prisma.user.update({
+    where: { id },
+    data,
+    select: { id: true, plan: true, status: true, role: true },
+  });
+  return c.json({ ok: true, user, limits: PLANS[normalizePlan(user.plan)] });
 });
 
 // POST /admin/nodes — daftarkan node baru → balas join token + perintah install.

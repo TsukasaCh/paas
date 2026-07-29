@@ -6,6 +6,7 @@ declare module "next-auth" {
   interface Session {
     userId: string;
     role: string;
+    plan: string;
     apiToken: string;
   }
 }
@@ -16,5 +17,6 @@ declare module "next-auth/jwt" {
     githubId?: number;
     githubLogin?: string;
     role?: string;
+    plan?: string;
   }
 }

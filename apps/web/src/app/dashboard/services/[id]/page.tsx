@@ -572,6 +572,13 @@ function VariablesTab({
 }
 
 // ── Settings ───────────────────────────────────────────────────
+// Batas replica per paket (harus cocok dengan apps/api/src/lib/plans.ts).
+const PLAN_REPLICAS: Record<string, { label: string; max: number }> = {
+  FREE: { label: "Free", max: 1 },
+  PRO: { label: "Pro", max: 2 },
+  ENTERPRISE: { label: "Enterprise", max: 50 },
+};
+
 function SettingsTab({
   token,
   svc,
@@ -583,6 +590,9 @@ function SettingsTab({
   onSaved: () => void;
   onDeleted: () => void;
 }) {
+  const { data: session } = useSession();
+  const plan = PLAN_REPLICAS[(session?.plan as string) ?? "FREE"] ?? PLAN_REPLICAS.FREE;
+  const maxReplicas = plan.max;
   const [form, setForm] = useState({
     name: svc.name,
     branch: svc.branch ?? "main",
@@ -635,20 +645,32 @@ function SettingsTab({
           </div>
           <div>
             <label className="mb-1 block text-xs text-muted-foreground">
-              Replicas <span className="opacity-60">(1–10)</span>
+              Replicas <span className="opacity-60">(1–{maxReplicas})</span>
             </label>
             <input
               type="number"
               min={1}
-              max={10}
+              max={maxReplicas}
               className={f}
               value={form.replicas}
-              onChange={(e) => setForm({ ...form, replicas: +e.target.value })}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  replicas: Math.min(maxReplicas, Math.max(1, +e.target.value || 1)),
+                })
+              }
             />
           </div>
         </div>
         <p className="text-xs text-muted-foreground">
           Replica disebar ke node yang tersedia. Deploy ulang agar berlaku.
+          {maxReplicas <= 2 && (
+            <>
+              {" "}
+              Paket <span className="text-foreground">{plan.label}</span> maksimal {maxReplicas}{" "}
+              replica — upgrade untuk lebih banyak.
+            </>
+          )}
         </p>
         <button onClick={save} disabled={saving} className="btn-primary rounded-lg px-4 py-2 text-sm font-semibold">
           {saving ? "Menyimpan…" : "Simpan perubahan"}

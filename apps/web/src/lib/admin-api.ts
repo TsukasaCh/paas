@@ -136,3 +136,50 @@ export async function deleteNode(token: string, id: string): Promise<void> {
   });
   if (!r.ok) throw new Error(`delete ${r.status}`);
 }
+
+// ── User management ────────────────────────────────────────────
+export type UserPlan = "FREE" | "PRO" | "ENTERPRISE";
+export type UserStatus = "ACTIVE" | "SUSPENDED" | "BANNED";
+
+export interface UserItem {
+  id: string;
+  email?: string | null;
+  username?: string | null;
+  name?: string | null;
+  image?: string | null;
+  role: "USER" | "ADMIN";
+  plan: UserPlan;
+  status: UserStatus;
+  createdAt: string;
+  projects: number;
+  services: number;
+}
+
+/** Ringkasan kuota tiap paket — untuk ditampilkan di UI. */
+export const PLAN_INFO: Record<UserPlan, { label: string; quota: string }> = {
+  FREE: { label: "Free", quota: "256 MB · shared CPU · 1 replika" },
+  PRO: { label: "Pro", quota: "4 GB · 2 core · 2 replika" },
+  ENTERPRISE: { label: "Enterprise", quota: "Unlimited · via lisensi" },
+};
+
+export async function listUsers(token: string): Promise<UserItem[]> {
+  const r = await fetch(`${API}/admin/users`, { headers: h(token) });
+  if (!r.ok) throw new Error(`users ${r.status}`);
+  return r.json();
+}
+
+export async function updateUser(
+  token: string,
+  id: string,
+  data: { plan?: UserPlan; status?: UserStatus; licenseKey?: string },
+): Promise<void> {
+  const r = await fetch(`${API}/admin/users/${id}`, {
+    method: "PATCH",
+    headers: h(token, true),
+    body: JSON.stringify(data),
+  });
+  if (!r.ok) {
+    const msg = await r.json().catch(() => ({}) as any);
+    throw new Error(msg.error ?? `update ${r.status}`);
+  }
+}

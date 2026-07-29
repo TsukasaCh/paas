@@ -32,8 +32,15 @@ export default function LoginPage() {
     setLoading(true);
     const res = await signIn("credentials", { identifier, password, redirect: false });
     setLoading(false);
-    if (res?.error) setError("Username/email atau password salah.");
-    else router.push("/dashboard");
+    if (res?.error) {
+      // Pesan spesifik (mis. akun disuspend/banned) diteruskan apa adanya;
+      // kegagalan kredensial biasa memakai pesan generik.
+      setError(
+        res.error === "CredentialsSignin"
+          ? "Username/email atau password salah."
+          : res.error,
+      );
+    } else router.push("/dashboard");
   }
 
   return (

@@ -7,6 +7,7 @@ import { enqueueDeployment, enqueueAction } from "../lib/queue.js";
 import { requireAuth } from "../middleware/auth.js";
 import { sealSecret, openSecret } from "@minipaas/auth";
 import { pickNodesForReplicas } from "../lib/scheduler.js";
+import { limitsFor } from "../lib/plans.js";
 import { ensureServiceDns, removeServiceDns, publicUrlFor } from "../lib/dns.js";
 import type { AppEnv } from "../types.js";
 
@@ -241,9 +242,21 @@ projects.patch("/services/:id", async (c) => {
     if (b[k] !== undefined) data[k] = b[k];
   }
   if (b.containerPort !== undefined) data.containerPort = Number(b.containerPort);
-  // Replicas dibatasi 1..10 agar tidak menghabiskan kapasitas node.
-  if (b.replicas !== undefined)
-    data.replicas = Math.min(10, Math.max(1, Number(b.replicas)));
+  // Replicas dibatasi oleh kuota paket user (Free 1, Pro 2, Enterprise banyak).
+  if (b.replicas !== undefined) {
+    const owner = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { plan: true },
+    });
+    const maxReplicas = limitsFor(owner?.plan).maxReplicas;
+    const want = Math.max(1, Number(b.replicas));
+    if (want > maxReplicas)
+      return c.json(
+        { error: `Paket Anda maksimal ${maxReplicas} replika. Upgrade untuk lebih banyak.` },
+        403,
+      );
+    data.replicas = want;
+  }
   // Posisi kartu di canvas.
   if (b.posX !== undefined) data.posX = Number(b.posX);
   if (b.posY !== undefined) data.posY = Number(b.posY);

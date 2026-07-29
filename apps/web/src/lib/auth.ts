@@ -31,11 +31,20 @@ export const authOptions: NextAuthOptions = {
         if (!user?.passwordHash) return null;
         const ok = await bcrypt.compare(creds.password, user.passwordHash);
         if (!ok) return null;
+        // Akun disuspend/banned tidak boleh masuk.
+        if (user.status !== "ACTIVE") {
+          throw new Error(
+            user.status === "BANNED"
+              ? "Akun Anda diblokir dari platform."
+              : "Akun Anda sedang disuspend.",
+          );
+        }
         return {
           id: user.id,
           name: user.name,
           email: user.email,
           role: user.role,
+          plan: user.plan,
         } as any;
       },
     }),
@@ -69,13 +78,28 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
+    // Blokir akun non-aktif untuk SEMUA provider (mis. GitHub OAuth), sebagai
+    // jaring pengaman selain cek di authorize credentials.
+    async signIn({ user }) {
+      const uid = (user as any)?.id;
+      if (!uid) return true;
+      const u = await prisma.user.findUnique({
+        where: { id: uid },
+        select: { status: true },
+      });
+      if (u && u.status !== "ACTIVE") return "/login?error=blocked";
+      return true;
+    },
     async jwt({ token, account, profile, user }) {
       if (account?.access_token) token.githubToken = account.access_token;
       if (profile) {
         token.githubId = (profile as any).id;
         token.githubLogin = (profile as any).login;
       }
-      if (user) token.role = (user as any).role ?? "USER";
+      if (user) {
+        token.role = (user as any).role ?? "USER";
+        token.plan = (user as any).plan ?? "FREE";
+      }
       if (account?.access_token && token.sub) {
         await prisma.user
           .update({
@@ -94,6 +118,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       session.userId = token.sub!;
       session.role = (token.role as string) ?? "USER";
+      session.plan = (token.plan as string) ?? "FREE";
       session.apiToken = await signApiToken({
         userId: token.sub!,
         login: token.githubLogin as string | undefined,

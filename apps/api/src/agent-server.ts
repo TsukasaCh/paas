@@ -24,6 +24,7 @@ import { prisma } from "@minipaas/db";
 import { publishLog } from "@minipaas/worker/logs";
 import { openSecret } from "@minipaas/auth";
 import { invalidateRoute } from "./proxy-server.js";
+import { limitsFor } from "./lib/plans.js";
 
 export function hashToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
@@ -170,7 +171,12 @@ export async function dispatchDeployment(deploymentId: string): Promise<void> {
   const dep = await prisma.deployment.findUnique({
     where: { id: deploymentId },
     include: {
-      service: { include: { envVars: true } },
+      service: {
+        include: {
+          envVars: true,
+          project: { include: { owner: { select: { plan: true } } } },
+        },
+      },
       instances: { orderBy: { replicaIndex: "asc" } },
     },
   });
@@ -178,6 +184,7 @@ export async function dispatchDeployment(deploymentId: string): Promise<void> {
   if (!dep.instances.length) throw new Error("Deployment tanpa instance");
 
   const svc = dep.service;
+  const limits = limitsFor(svc.project.owner.plan); // kuota paket pemilik service
   const base = {
     deploymentId: dep.id,
     serviceId: svc.id,
@@ -191,6 +198,8 @@ export async function dispatchDeployment(deploymentId: string): Promise<void> {
     runtime: (svc.source === "IMAGE" || svc.type === "DATABASE"
       ? "docker"
       : (process.env.DEPLOY_RUNTIME ?? "node")) as "node" | "docker",
+    memoryMb: limits.memoryMb,
+    cpus: limits.cpus,
   };
 
   await prisma.deployment.update({

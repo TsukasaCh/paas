@@ -1,5 +1,6 @@
 // Singleton Prisma client agar tidak membuka koneksi berlebih saat hot-reload dev.
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
@@ -13,6 +14,16 @@ if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
 // Re-export tipe model Prisma (Service, Deployment, dll.).
 export * from "@prisma/client";
+
+// ── Password helpers (bcrypt) ─────────────────────────────────
+// Dipusatkan di sini karena @minipaas/db sudah bergantung ke bcryptjs;
+// dipakai bersama oleh web (register) & api (ganti password).
+export function hashPassword(plain: string): Promise<string> {
+  return bcrypt.hash(plain, 10);
+}
+export function verifyPassword(plain: string, hash: string): Promise<boolean> {
+  return bcrypt.compare(plain, hash);
+}
 
 // ── Konstanta status ──────────────────────────────────────────
 // Status disimpan sebagai String di DB (schema portable SQLite/Postgres),

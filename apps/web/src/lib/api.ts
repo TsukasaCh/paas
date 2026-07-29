@@ -245,3 +245,59 @@ export async function getUsage(token: string): Promise<Usage> {
   if (!r.ok) throw new Error(`Gagal memuat usage (${r.status})`);
   return r.json();
 }
+
+export interface Me {
+  id: string;
+  name: string | null;
+  username: string | null;
+  email: string | null;
+  role: "USER" | "ADMIN";
+  plan: "FREE" | "PRO" | "ENTERPRISE";
+  githubLogin: string | null;
+  hasPassword: boolean;
+  createdAt: string;
+}
+
+async function readErr(r: Response, fallback: string) {
+  const j = await r.json().catch(() => ({}) as any);
+  return new Error(j.error ?? fallback);
+}
+
+// GET /me — profil akun.
+export async function getMe(token: string): Promise<Me> {
+  const r = await fetch(`${API}/me`, { headers: headers(token) });
+  if (!r.ok) throw await readErr(r, `Gagal memuat akun (${r.status})`);
+  return r.json();
+}
+
+// PATCH /me — ubah nama / username.
+export async function updateProfile(
+  token: string,
+  data: { name?: string; username?: string },
+): Promise<void> {
+  const r = await fetch(`${API}/me`, {
+    method: "PATCH",
+    headers: headers(token, true),
+    body: JSON.stringify(data),
+  });
+  if (!r.ok) throw await readErr(r, `Gagal menyimpan (${r.status})`);
+}
+
+// POST /me/password — ganti password.
+export async function changePassword(
+  token: string,
+  data: { currentPassword: string; newPassword: string },
+): Promise<void> {
+  const r = await fetch(`${API}/me/password`, {
+    method: "POST",
+    headers: headers(token, true),
+    body: JSON.stringify(data),
+  });
+  if (!r.ok) throw await readErr(r, `Gagal ganti password (${r.status})`);
+}
+
+// DELETE /me — hapus akun + semua project/service.
+export async function deleteAccount(token: string): Promise<void> {
+  const r = await fetch(`${API}/me`, { method: "DELETE", headers: headers(token) });
+  if (!r.ok) throw await readErr(r, `Gagal hapus akun (${r.status})`);
+}

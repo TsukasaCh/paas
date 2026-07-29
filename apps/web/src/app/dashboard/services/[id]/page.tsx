@@ -238,6 +238,36 @@ function Empty({ text }: { text: string }) {
 }
 
 // ── Deployments ────────────────────────────────────────────────
+function timeAgo(iso: string) {
+  const s = Math.floor((Date.now() - +new Date(iso)) / 1000);
+  if (s < 45) return "baru saja";
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m} menit lalu`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} jam lalu`;
+  const d = Math.floor(h / 24);
+  return `${d} hari lalu`;
+}
+
+function statusMeta(status: string) {
+  switch (status) {
+    case "RUNNING":
+      return { label: "Aktif", pill: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300", line: "Deployment berhasil", tone: "ok" as const };
+    case "FAILED":
+      return { label: "Gagal", pill: "border-red-500/30 bg-red-500/10 text-red-300", line: "Deployment gagal", tone: "err" as const };
+    case "BUILDING":
+      return { label: "Build", pill: "border-amber-500/30 bg-amber-500/10 text-amber-300", line: "Sedang membangun…", tone: "run" as const };
+    case "DEPLOYING":
+      return { label: "Deploy", pill: "border-amber-500/30 bg-amber-500/10 text-amber-300", line: "Sedang men-deploy…", tone: "run" as const };
+    case "QUEUED":
+      return { label: "Antre", pill: "border-border bg-surface2 text-muted-foreground", line: "Menunggu antrean…", tone: "run" as const };
+    case "STOPPED":
+      return { label: "Berhenti", pill: "border-border bg-surface2 text-muted-foreground", line: "Dihentikan", tone: "idle" as const };
+    default:
+      return { label: status, pill: "border-border bg-surface2 text-muted-foreground", line: status, tone: "idle" as const };
+  }
+}
+
 function DeploymentsTab({
   svc,
   onView,
@@ -245,68 +275,107 @@ function DeploymentsTab({
   svc: ServiceDetail;
   onView: (id: string) => void;
 }) {
-  if (!svc.deployments.length)
-    return <Empty text="Belum ada deployment." />;
+  if (!svc.deployments.length) return <Empty text="Belum ada deployment." />;
+  const via = svc.source === "IMAGE" ? "Docker image" : "GitHub";
+
   return (
-    <div className="card divide-y divide-border">
+    <div className="space-y-3">
       {svc.deployments.map((d) => {
+        const m = statusMeta(d.status);
+        const active = d.status === "RUNNING";
+        const inst = d.instances ?? [];
+        const up = inst.filter((i) => i.status === "RUNNING").length;
         const dur =
           d.startedAt && d.finishedAt
             ? `${Math.max(1, Math.round((+new Date(d.finishedAt) - +new Date(d.startedAt)) / 1000))}s`
-            : "—";
-        const color =
-          d.status === "RUNNING"
-            ? "text-emerald-300"
-            : d.status === "FAILED"
-              ? "text-red-300"
-              : "text-muted-foreground";
-        const inst = d.instances ?? [];
-        const up = inst.filter((i) => i.status === "RUNNING").length;
+            : null;
+        const source = d.commitSha
+          ? `${d.commitSha.slice(0, 7)} · ${d.branch}`
+          : (svc.image ?? svc.repoFullName ?? svc.name);
+
         return (
-          <button
+          <div
             key={d.id}
-            onClick={() => onView(d.id)}
-            className="flex w-full items-center gap-4 px-4 py-3 text-left transition-colors hover:bg-surface2/50"
+            className={`card p-4 ${active ? "border-emerald-500/25 ring-1 ring-inset ring-emerald-500/10" : ""}`}
           >
-            <span className={`text-xs font-medium ${color}`}>{d.status}</span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-mono text-xs text-muted-foreground">
-                {d.commitSha ? `${d.commitSha.slice(0, 7)} · ${d.branch}` : svc.image}
-                {d.node ? ` · ${d.node.region}` : ""}
-              </p>
-              {inst.length > 0 && (
-                <p className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                  <span className="text-[11px] text-muted-foreground">
+            {/* Baris atas: status + sumber + waktu | region + replica */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex min-w-0 items-start gap-3">
+                <span
+                  className={`shrink-0 rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${m.pill}`}
+                >
+                  {m.label}
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate font-mono text-xs text-foreground">{source}</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    {timeAgo(d.createdAt)} · via {via}
+                    {dur ? ` · build ${dur}` : ""}
+                  </p>
+                </div>
+              </div>
+              <div className="shrink-0 space-y-0.5 text-right text-[11px] text-muted-foreground">
+                {d.node?.region && (
+                  <div className="flex items-center justify-end gap-1">
+                    <IconGlobe className="h-3 w-3" /> {d.node.region}
+                  </div>
+                )}
+                {inst.length > 0 && (
+                  <div>
                     {up}/{inst.length} replica
-                  </span>
-                  {inst.map((i) => (
-                    <span
-                      key={i.id}
-                      title={`replica #${i.replicaIndex} · ${i.node?.name ?? "-"}${i.hostPort ? ` · :${i.hostPort}` : ""}`}
-                      className={`rounded px-1.5 py-0.5 font-mono text-[10px] ${
-                        i.status === "RUNNING"
-                          ? "bg-emerald-500/10 text-emerald-300"
-                          : i.status === "FAILED"
-                            ? "bg-red-500/10 text-red-300"
-                            : "bg-surface2 text-muted-foreground"
-                      }`}
-                    >
-                      #{i.replicaIndex}
-                      {i.hostPort ? `:${i.hostPort}` : ""}
-                    </span>
-                  ))}
-                </p>
-              )}
-              {d.errorMessage && (
-                <p className="truncate text-xs text-red-400">{d.errorMessage}</p>
-              )}
+                  </div>
+                )}
+              </div>
             </div>
-            <span className="text-xs text-muted-foreground">{dur}</span>
-            <span className="text-xs text-muted-foreground">
-              {new Date(d.createdAt).toLocaleString("id-ID")}
-            </span>
-            <span className="text-xs text-violet-400">Lihat log →</span>
-          </button>
+
+            {/* Baris status + aksi */}
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <span className="flex min-w-0 items-center gap-1.5 text-xs">
+                {m.tone === "ok" ? (
+                  <IconCheck className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                ) : m.tone === "err" ? (
+                  <IconWarn className="h-3.5 w-3.5 shrink-0 text-red-400" />
+                ) : m.tone === "run" ? (
+                  <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-amber-400" />
+                ) : (
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-500" />
+                )}
+                <span
+                  className={`truncate ${m.tone === "err" ? "text-red-300" : "text-muted-foreground"}`}
+                >
+                  {d.errorMessage && d.status === "FAILED" ? d.errorMessage : m.line}
+                </span>
+              </span>
+              <button
+                onClick={() => onView(d.id)}
+                className="btn-ghost shrink-0 rounded-lg px-2.5 py-1.5 text-xs"
+              >
+                Lihat log →
+              </button>
+            </div>
+
+            {/* Chip per replica */}
+            {inst.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {inst.map((i) => (
+                  <span
+                    key={i.id}
+                    title={`replica #${i.replicaIndex} · ${i.node?.name ?? "-"}${i.hostPort ? ` · :${i.hostPort}` : ""}`}
+                    className={`rounded px-1.5 py-0.5 font-mono text-[10px] ${
+                      i.status === "RUNNING"
+                        ? "bg-emerald-500/10 text-emerald-300"
+                        : i.status === "FAILED"
+                          ? "bg-red-500/10 text-red-300"
+                          : "bg-surface2 text-muted-foreground"
+                    }`}
+                  >
+                    #{i.replicaIndex}
+                    {i.hostPort ? `:${i.hostPort}` : ""}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
         );
       })}
     </div>

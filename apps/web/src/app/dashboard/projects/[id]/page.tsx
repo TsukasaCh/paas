@@ -25,7 +25,15 @@ export default function ProjectCanvasPage() {
 
   // Posisi lokal saat drag (biar responsif tanpa nunggu server).
   const [pos, setPos] = useState<Record<string, { x: number; y: number }>>({});
-  const drag = useRef<{ id: string; dx: number; dy: number } | null>(null);
+  // startX/startY + moved dipakai untuk membedakan KLIK (buka detail) vs GESER.
+  const drag = useRef<{
+    id: string;
+    dx: number;
+    dy: number;
+    startX: number;
+    startY: number;
+    moved: boolean;
+  } | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   // Cermin posisi terkini; onMouseUp membacanya agar tidak memakai state basi.
   const posRef = useRef(pos);
@@ -56,12 +64,16 @@ export default function ProjectCanvasPage() {
   }, [project]);
 
   const onMouseDown = (e: React.MouseEvent, s: Service) => {
+    if (e.button !== 0) return; // hanya klik kiri
     const p = pos[s.id] ?? { x: 0, y: 0 };
     const rect = canvasRef.current!.getBoundingClientRect();
     drag.current = {
       id: s.id,
       dx: e.clientX - rect.left - p.x,
       dy: e.clientY - rect.top - p.y,
+      startX: e.clientX,
+      startY: e.clientY,
+      moved: false,
     };
     e.preventDefault();
   };
@@ -69,6 +81,10 @@ export default function ProjectCanvasPage() {
   const onMouseMove = useCallback((e: MouseEvent) => {
     const d = drag.current;
     if (!d || !canvasRef.current) return;
+    // Anggap "geser" hanya bila pointer bergerak >5px — di bawah itu = klik.
+    if (!d.moved && Math.hypot(e.clientX - d.startX, e.clientY - d.startY) > 5)
+      d.moved = true;
+    if (!d.moved) return;
     const rect = canvasRef.current.getBoundingClientRect();
     const x = Math.max(0, Math.min(rect.width - CARD_W, e.clientX - rect.left - d.dx));
     const y = Math.max(0, Math.min(rect.height - CARD_H, e.clientY - rect.top - d.dy));
@@ -80,10 +96,16 @@ export default function ProjectCanvasPage() {
   const onMouseUp = useCallback(() => {
     const d = drag.current;
     drag.current = null;
-    if (!d || !token) return;
+    if (!d) return;
+    // Tidak digeser → perlakukan sebagai klik: buka detail service.
+    if (!d.moved) {
+      router.push(`/dashboard/services/${d.id}`);
+      return;
+    }
+    if (!token) return;
     const p = posRef.current[d.id]; // baca dari ref, bukan state
     if (p) updateService(token, d.id, { posX: p.x, posY: p.y }).catch(() => {});
-  }, [token]);
+  }, [token, router]);
 
   useEffect(() => {
     window.addEventListener("mousemove", onMouseMove);
@@ -163,11 +185,12 @@ export default function ProjectCanvasPage() {
             <div
               key={s.id}
               onMouseDown={(e) => onMouseDown(e, s)}
+              title="Klik untuk buka · seret untuk menata"
               style={{ left: p.x, top: p.y, width: CARD_W }}
-              className={`absolute select-none rounded-xl border bg-card p-3 shadow-lg transition-shadow ${
+              className={`group absolute select-none rounded-xl border bg-card p-3 shadow-lg transition-all ${
                 dragging
                   ? "cursor-grabbing border-violet-500/60 shadow-violet-500/20"
-                  : "cursor-grab border-border hover:border-violet-500/40"
+                  : "cursor-pointer border-border hover:-translate-y-0.5 hover:border-violet-500/50 hover:shadow-violet-500/10"
               }`}
             >
               <div className="flex items-center gap-2">
@@ -187,13 +210,9 @@ export default function ProjectCanvasPage() {
               )}
               <div className="mt-2 flex items-center justify-between">
                 <ServiceStatusBadge status={s.status} />
-                <Link
-                  href={`/dashboard/services/${s.id}`}
-                  onMouseDown={(e) => e.stopPropagation()}
-                  className="text-[11px] text-violet-400 hover:underline"
-                >
+                <span className="text-[11px] text-violet-400 opacity-0 transition-opacity group-hover:opacity-100">
                   Buka →
-                </Link>
+                </span>
               </div>
             </div>
           );

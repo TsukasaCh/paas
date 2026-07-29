@@ -2,10 +2,10 @@
 // Canvas arsitektur project: kartu service yang bisa di-drag; posisi disimpan ke DB.
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useProjectStore, type Service } from "@/store/use-project-store";
-import { updateService } from "@/lib/api";
+import { updateService, deleteProject } from "@/lib/api";
 import { ServiceStatusBadge } from "@/components/service-status-badge";
 import { AddServiceDialog } from "@/components/add-service-dialog";
 import { IconRocket, IconDatabase } from "@/components/icons";
@@ -15,10 +15,13 @@ const CARD_H = 96;
 
 export default function ProjectCanvasPage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const { data: session } = useSession();
   const token = session?.apiToken;
   const { projects, fetchProjects } = useProjectStore();
   const project = projects.find((p) => p.id === id);
+  const [delOpen, setDelOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Posisi lokal saat drag (biar responsif tanpa nunggu server).
   const [pos, setPos] = useState<Record<string, { x: number; y: number }>>({});
@@ -93,6 +96,18 @@ export default function ProjectCanvasPage() {
 
   if (!project)
     return <p className="p-10 text-sm text-muted-foreground">Memuat project…</p>;
+
+  async function handleDelete() {
+    if (!token || !project) return;
+    setDeleting(true);
+    try {
+      await deleteProject(token, project.id);
+      router.push("/dashboard");
+    } catch (e) {
+      alert((e as Error).message);
+      setDeleting(false);
+    }
+  }
 
   return (
     <div className="px-8 py-8">
@@ -188,6 +203,59 @@ export default function ProjectCanvasPage() {
       <p className="mt-3 text-xs text-muted-foreground">
         Posisi tersimpan otomatis saat kartu dilepas.
       </p>
+
+      {/* Danger zone — hapus project (destruktif). */}
+      <div className="mt-10 rounded-xl border border-red-500/20 bg-red-500/[0.03] p-5">
+        <p className="font-medium text-red-300">Danger zone</p>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-muted-foreground">
+            Hapus project ini beserta{" "}
+            <span className="text-foreground">{project.services.length} service</span>-nya
+            secara permanen.
+          </p>
+          <button
+            onClick={() => setDelOpen(true)}
+            className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-300 transition-colors hover:bg-red-500/20"
+          >
+            Hapus project
+          </button>
+        </div>
+      </div>
+
+      {delOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+          onClick={() => !deleting && setDelOpen(false)}
+        >
+          <div onClick={(e) => e.stopPropagation()} className="card w-full max-w-md p-6">
+            <h2 className="text-lg font-semibold">Hapus project “{project.name}”?</h2>
+            <p className="mb-5 mt-1 text-sm text-muted-foreground">
+              Project ini &amp;{" "}
+              <span className="font-medium text-foreground">
+                {project.services.length} service
+              </span>{" "}
+              (container &amp; deployment-nya) akan dihentikan &amp; dihapus permanen.
+              Tindakan ini tidak bisa dibatalkan.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setDelOpen(false)}
+                disabled={deleting}
+                className="btn-ghost rounded-lg px-4 py-2 text-sm"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="rounded-lg border border-red-500/30 bg-red-500/15 px-4 py-2 text-sm font-semibold text-red-300 transition-colors hover:bg-red-500/25 disabled:opacity-50"
+              >
+                {deleting ? "Menghapus…" : "Ya, hapus permanen"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

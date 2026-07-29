@@ -323,4 +323,24 @@ projects.delete("/services/:id", async (c) => {
   return c.json({ ok: true });
 });
 
+// DELETE /:id — hapus project + SEMUA service-nya (Danger Zone).
+projects.delete("/:id", async (c) => {
+  const userId = c.get("userId");
+  const projectId = c.req.param("id");
+  const project = await prisma.project.findFirst({
+    where: { id: projectId, ownerId: userId },
+    include: { services: { select: { id: true, dnsRecordId: true } } },
+  });
+  if (!project) return c.json({ error: "Forbidden" }, 403);
+
+  // Bersihkan container + subdomain tiap service dulu, lalu hapus project.
+  // (delete Project → cascade ke Service/Deployment/Instance/EnvVar via schema.)
+  for (const svc of project.services) {
+    await enqueueAction("cleanup", svc.id).catch(() => {});
+    await removeServiceDns(svc.dnsRecordId).catch(() => {});
+  }
+  await prisma.project.delete({ where: { id: projectId } });
+  return c.json({ ok: true });
+});
+
 export default projects;

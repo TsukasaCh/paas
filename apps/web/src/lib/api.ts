@@ -214,3 +214,14 @@ export async function deleteService(
   });
   if (!res.ok) throw new Error(`Gagal hapus service (${res.status})`);
 }
+
+export async function deleteProject(
+  token: string,
+  projectId: string,
+): Promise<void> {
+  const res = await fetch(`${API}/projects/${projectId}`, {
+    method: "DELETE",
+    headers: headers(token),
+  });
+  if (!res.ok) throw new Error(`Gagal hapus project (${res.status})`);
+}

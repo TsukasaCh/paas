@@ -27,6 +27,12 @@ corepack pnpm --filter @minipaas/agent build:bundle
 log "Build web"
 corepack pnpm --filter @minipaas/web build
 
+# Samakan kepemilikan .next ke user pemanggil (mis. ubuntu) agar build manual
+# non-sudo berikutnya tidak kena EACCES pada file milik root.
+if [ -n "${SUDO_USER:-}" ]; then
+  chown -R "$SUDO_USER":"$SUDO_USER" "$REPO/apps/web/.next" 2>/dev/null || true
+fi
+
 log "Enkripsi secret lama (idempoten)"
 node scripts/encrypt-secrets.mjs --apply || true
 

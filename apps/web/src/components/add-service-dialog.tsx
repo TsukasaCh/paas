@@ -25,10 +25,14 @@ export function AddServiceDialog({
   projectId,
   token,
   onCreated,
+  triggerLabel = "+ Add Service",
+  triggerClassName = "btn-ghost rounded-lg px-3 py-1.5 text-xs font-medium",
 }: {
   projectId: string;
   token: string;
   onCreated: () => void;
+  triggerLabel?: string;
+  triggerClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -156,11 +160,8 @@ export function AddServiceDialog({
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="btn-ghost rounded-lg px-3 py-1.5 text-xs font-medium"
-      >
-        + Create
+      <button onClick={() => setOpen(true)} className={triggerClassName}>
+        {triggerLabel}
       </button>
 
       {open && (

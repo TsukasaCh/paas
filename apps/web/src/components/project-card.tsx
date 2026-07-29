@@ -7,6 +7,7 @@ import { useProjectStore, type Project } from "@/store/use-project-store";
 import { ServiceStatusBadge } from "./service-status-badge";
 import { DeploymentLogs } from "./deployment-logs";
 import { AddServiceDialog } from "./add-service-dialog";
+import { IconFolder, IconRocket, IconDatabase, IconWarn } from "./icons";
 import { stopService, restartService, deleteService } from "@/lib/api";
 
 export function ProjectCard({ project }: { project: Project }) {
@@ -48,8 +49,8 @@ export function ProjectCard({ project }: { project: Project }) {
     <div className="card p-5">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <span className="grid h-7 w-7 place-items-center rounded-lg bg-surface2 text-sm">
-            🗂️
+          <span className="grid h-7 w-7 place-items-center rounded-lg bg-surface2 text-muted-foreground">
+            <IconFolder className="h-4 w-4" />
           </span>
           <h3 className="font-semibold tracking-tight">{project.name}</h3>
           <span className="rounded-full bg-surface2 px-2 py-0.5 text-[11px] text-muted-foreground">
@@ -81,8 +82,12 @@ export function ProjectCard({ project }: { project: Project }) {
               href={`/dashboard/services/${svc.id}`}
               className="flex min-w-0 flex-1 items-center gap-3 group"
             >
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-violet-500/20 to-fuchsia-500/10 text-base ring-1 ring-inset ring-white/5">
-                {svc.type === "DATABASE" ? "🗄️" : "🚀"}
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-violet-500/20 to-fuchsia-500/10 text-violet-200 ring-1 ring-inset ring-white/5">
+                {svc.type === "DATABASE" ? (
+                  <IconDatabase className="h-4 w-4" />
+                ) : (
+                  <IconRocket className="h-4 w-4" />
+                )}
               </span>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
@@ -139,15 +144,25 @@ export function ProjectCard({ project }: { project: Project }) {
             </div>
 
             {deployErr[svc.id] && (
-              <p className="basis-full rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
-                ⚠️ {deployErr[svc.id]}
+              <p className="basis-full flex items-start gap-1.5 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+                <IconWarn className="mt-px h-3.5 w-3.5 shrink-0" />
+                {deployErr[svc.id]}
               </p>
             )}
           </li>
         ))}
         {project.services.length === 0 && (
-          <li className="rounded-xl border border-dashed border-border px-3 py-8 text-center text-sm text-muted-foreground">
-            Belum ada service. Klik <span className="text-foreground">+ Add Service</span>.
+          <li className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border px-3 py-8 text-center">
+            <p className="text-sm text-muted-foreground">Belum ada service di project ini.</p>
+            {token && (
+              <AddServiceDialog
+                projectId={project.id}
+                token={token}
+                onCreated={() => fetchProjects(token)}
+                triggerLabel="+ Add Service"
+                triggerClassName="btn-primary rounded-lg px-4 py-2 text-sm font-semibold"
+              />
+            )}
           </li>
         )}
       </ul>

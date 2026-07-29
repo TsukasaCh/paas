@@ -17,6 +17,7 @@ import {
 import { useProjectStore } from "@/store/use-project-store";
 import { ServiceStatusBadge } from "@/components/service-status-badge";
 import { DeploymentLogs } from "@/components/deployment-logs";
+import { IconRocket, IconDatabase, IconBox, IconGlobe, IconWarn, IconX, IconCheck } from "@/components/icons";
 import { stopService, restartService } from "@/lib/api";
 
 type Tab = "deployments" | "logs" | "metrics" | "variables" | "settings";
@@ -96,8 +97,14 @@ export default function ServiceDetailPage() {
       {/* Header */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <span className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/10 text-xl ring-1 ring-inset ring-white/5">
-            {svc.type === "DATABASE" ? "🗄️" : svc.source === "IMAGE" ? "🐳" : "🚀"}
+          <span className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/10 text-violet-200 ring-1 ring-inset ring-white/5">
+            {svc.type === "DATABASE" ? (
+              <IconDatabase className="h-5 w-5" />
+            ) : svc.source === "IMAGE" ? (
+              <IconBox className="h-5 w-5" />
+            ) : (
+              <IconRocket className="h-5 w-5" />
+            )}
           </span>
           <div>
             <h1 className="text-xl font-bold tracking-tight">{svc.name}</h1>
@@ -116,9 +123,9 @@ export default function ServiceDetailPage() {
               href={url}
               target="_blank"
               rel="noreferrer"
-              className="btn-ghost rounded-lg px-3 py-1.5 text-xs"
+              className="btn-ghost flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs"
             >
-              🌐 Buka
+              <IconGlobe className="h-3.5 w-3.5" /> Buka
             </a>
           )}
           <button onClick={handleDeploy} className="btn-primary rounded-lg px-3 py-1.5 text-xs font-semibold">
@@ -152,8 +159,9 @@ export default function ServiceDetailPage() {
       )}
 
       {err && (
-        <p className="mb-4 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
-          ⚠️ {err}
+        <p className="mb-4 flex items-start gap-1.5 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+          <IconWarn className="mt-0.5 h-4 w-4 shrink-0" />
+          {err}
         </p>
       )}
 
@@ -343,9 +351,12 @@ function MetricsTab({ token, id }: { token?: string; id: string }) {
   return (
     <div className="space-y-4">
       {semuaBasi && (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-          ⚠️ Agent belum melaporkan metrics terbaru — angka disembunyikan agar tidak
-          menyesatkan. Cek koneksi node.
+        <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+          <IconWarn className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            Agent belum melaporkan metrics terbaru — angka disembunyikan agar tidak
+            menyesatkan. Cek koneksi node.
+          </span>
         </div>
       )}
 
@@ -538,9 +549,10 @@ function VariablesTab({
             />
             <button
               onClick={() => setRows((p) => p.filter((_, idx) => idx !== i))}
-              className="btn-ghost rounded-lg px-2 text-xs"
+              className="btn-ghost grid place-items-center rounded-lg px-2"
+              aria-label="Hapus baris"
             >
-              ✕
+              <IconX className="h-3.5 w-3.5" />
             </button>
           </div>
         ))}
@@ -549,7 +561,11 @@ function VariablesTab({
         <button onClick={save} disabled={saving} className="btn-primary rounded-lg px-4 py-2 text-sm font-semibold">
           {saving ? "Menyimpan…" : "Simpan"}
         </button>
-        {ok && <span className="text-xs text-emerald-300">✓ Tersimpan</span>}
+        {ok && (
+          <span className="flex items-center gap-1 text-xs text-emerald-300">
+            <IconCheck className="h-3.5 w-3.5" /> Tersimpan
+          </span>
+        )}
       </div>
     </div>
   );
